@@ -1,7 +1,32 @@
+-- lua/lvim-control-center/config.lua
 local M = {}
 
+-- NOTE: `save` is kept only for backward-compat comments; no longer used (no SQLite).
 M = {
 	save = "~/.local/share/nvim/lvim-control-center",
+
+	-- Where/how we persist & read values via neoconf
+	neoconf = {
+		-- All control-center values are stored under this key unless a setting provides its own `path`
+		-- e.g. "lvim_control_center.relativenumber"
+		prefix = "lvim_control_center",
+
+		-- Default write scope when saving values through neoconf.set
+		--   "local"  -> <project>/.neoconf.json
+		--   "global" -> stdpath("config")/neoconf.json
+		default_scope = "local",
+
+		-- If a setting name already contains dots (e.g. "lsp.inlay_hint"), treat it as a full path
+		-- instead of prefixing with `prefix`.
+		respect_dotted_name = true,
+
+		-- Automatically persist after calling user `setting.set(...)`
+		write_after_set = true,
+
+		-- Default read mode when loading values (merged | local | global)
+		read_scope = "merged",
+	},
+
 	window_size = {
 		width = 0.8,
 		height = 0.8,
@@ -31,6 +56,9 @@ M = {
 		LvimControlCenterIconActive = { fg = "#b65252" },
 		LvimControlCenterIconInactive = { fg = "#a26666" },
 	},
+
+	-- You pass your groups in via require("lvim-control-center").setup({ groups = { ... } })
+	groups = {},
 }
 
 if M.save then

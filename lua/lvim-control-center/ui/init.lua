@@ -1,3 +1,4 @@
+-- lua/lvim-control-center/ui/init.lua
 local config = require("lvim-control-center.config")
 local highlight = require("lvim-control-center.ui.highlight")
 local data = require("lvim-control-center.persistence.data")
@@ -10,15 +11,15 @@ local function render_setting_line(setting, value)
 	if t == "bool" or t == "boolean" then
 		return string.format(" %s %s", value and config.icons.is_true or config.icons.is_false, label)
 	elseif t == "select" then
-		return string.format(" %s %s: %s", config.icons.is_select, label, value)
+		return string.format(" %s %s: %s", config.icons.is_select, label, value ~= nil and tostring(value) or "")
 	elseif t == "int" or t == "integer" then
-		return string.format(" %s %s: %d", config.icons.is_int, label, value or 0)
+		return string.format(" %s %s: %d", config.icons.is_int, label, tonumber(value or 0))
 	elseif t == "float" or t == "number" then
-		return string.format(" %s %s: %s", config.icons.is_float, label, value or 0)
+		return string.format(" %s %s: %s", config.icons.is_float, label, value ~= nil and tostring(value) or "0")
 	elseif t == "action" then
 		return string.format(" %s %s", config.icons.is_action or "", label)
 	else
-		return string.format(" %s %s: %s", config.icons.is_string, label, value)
+		return string.format(" %s %s: %s", config.icons.is_string, label, value ~= nil and tostring(value) or "")
 	end
 end
 
@@ -35,7 +36,7 @@ local function get_settings_lines(group)
 				end)
 			end
 			if value == nil and setting.type ~= "action" then
-				value = data.load(setting.name)
+				value = data.load_setting(setting)
 			end
 			if value == nil and setting.default ~= nil and setting.type ~= "action" then
 				value = setting.default
@@ -386,20 +387,28 @@ M.open = function(tab_selector, id_or_row)
 					return
 				end
 
+				local function persist(val)
+					if setting.persist == false then
+						return
+					end
+					data.save_setting(setting, val)
+				end
+
 				if setting.type == "bool" or setting.type == "boolean" then
-					local value = data.load(setting.name)
+					local value = data.load_setting(setting)
 					if value == nil then
 						value = setting.default
 					end
 					value = not value
 					if setting.set then
 						setting.set(value, nil, origin_bufnr)
-					else
-						data.save(setting.name, value)
+					end
+					if (config.neoconf and config.neoconf.write_after_set) ~= false then
+						persist(value)
 					end
 					draw()
 				elseif setting.type == "select" and setting.options then
-					local value = data.load(setting.name)
+					local value = data.load_setting(setting)
 					if value == nil then
 						value = setting.default or setting.options[1]
 					end
@@ -413,65 +422,63 @@ M.open = function(tab_selector, id_or_row)
 					local next_val = setting.options[(idx % #setting.options) + 1]
 					if setting.set then
 						setting.set(next_val, nil, origin_bufnr)
-					else
-						data.save(setting.name, next_val)
+					end
+					if (config.neoconf and config.neoconf.write_after_set) ~= false then
+						persist(next_val)
 					end
 					draw()
 				elseif setting.type == "text" or setting.type == "string" then
 					local prompt = "Set " .. (setting.label or setting.name) .. ":"
-					vim.ui.input(
-						{ prompt = prompt, default = tostring(data.load(setting.name) or setting.default or "") },
-						function(input)
-							if input then
-								if setting.set then
-									setting.set(input, nil, origin_bufnr)
-								else
-									data.save(setting.name, input)
-								end
-								draw()
+					local current = data.load_setting(setting) or setting.default or ""
+					vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
+						if input then
+							if setting.set then
+								setting.set(input, nil, origin_bufnr)
 							end
+							if (config.neoconf and config.neoconf.write_after_set) ~= false then
+								persist(input)
+							end
+							draw()
 						end
-					)
+					end)
 				elseif setting.type == "int" or setting.type == "integer" then
 					local prompt = "Set " .. (setting.label or setting.name) .. ":"
-					vim.ui.input(
-						{ prompt = prompt, default = tostring(data.load(setting.name) or setting.default or "") },
-						function(input)
-							if input then
-								local num = tonumber(input)
-								if num and math.floor(num) == num then
-									if setting.set then
-										setting.set(num, nil, origin_bufnr)
-									else
-										data.save(setting.name, num)
-									end
-									draw()
-								else
-									vim.notify("Please enter a valid integer!", vim.log.levels.ERROR)
+					local current = data.load_setting(setting) or setting.default or 0
+					vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
+						if input then
+							local num = tonumber(input)
+							if num and math.floor(num) == num then
+								if setting.set then
+									setting.set(num, nil, origin_bufnr)
 								end
+								if (config.neoconf and config.neoconf.write_after_set) ~= false then
+									persist(num)
+								end
+								draw()
+							else
+								vim.notify("Please enter a valid integer!", vim.log.levels.ERROR)
 							end
 						end
-					)
+					end)
 				elseif setting.type == "float" or setting.type == "number" then
 					local prompt = "Set " .. (setting.label or setting.name) .. ":"
-					vim.ui.input(
-						{ prompt = prompt, default = tostring(data.load(setting.name) or setting.default or "") },
-						function(input)
-							if input then
-								local num = tonumber(input)
-								if num then
-									if setting.set then
-										setting.set(num, nil, origin_bufnr)
-									else
-										data.save(setting.name, num)
-									end
-									draw()
-								else
-									vim.notify("Please enter a valid number!", vim.log.levels.ERROR)
+					local current = data.load_setting(setting) or setting.default or 0
+					vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
+						if input then
+							local num = tonumber(input)
+							if num then
+								if setting.set then
+									setting.set(num, nil, origin_bufnr)
 								end
+								if (config.neoconf and config.neoconf.write_after_set) ~= false then
+									persist(num)
+								end
+								draw()
+							else
+								vim.notify("Please enter a valid number!", vim.log.levels.ERROR)
 							end
 						end
-					)
+					end)
 				elseif setting.type == "action" then
 					if setting.run and type(setting.run) == "function" then
 						setting.run(origin_bufnr)
@@ -494,7 +501,7 @@ M.open = function(tab_selector, id_or_row)
 					return
 				end
 
-				local value = data.load(setting.name)
+				local value = data.load_setting(setting)
 				if value == nil then
 					value = setting.default or setting.options[1]
 				end
@@ -516,8 +523,9 @@ M.open = function(tab_selector, id_or_row)
 
 				if setting.set then
 					setting.set(prev_val, nil, origin_bufnr)
-				else
-					data.save(setting.name, prev_val)
+				end
+				if (config.neoconf and config.neoconf.write_after_set) ~= false and setting.persist ~= false then
+					data.save_setting(setting, prev_val)
 				end
 
 				draw()

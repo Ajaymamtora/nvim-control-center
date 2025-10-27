@@ -49,7 +49,7 @@ local function get_settings_lines(group)
 end
 
 local function get_keybindings_line(setting_type)
-	local base_bindings = "j/k: Navigate  h/l: Change Tab  Esc/q: Close"
+	local base_bindings = "↑↓/jk: Navigate  ←→/hl: Change Tab  Esc/q: Close"
 	local action_bindings = "  Enter: Execute"
 	local edit_bindings = "  Enter: Edit"
 	local toggle_bindings = "  Enter: Toggle"
@@ -436,6 +436,23 @@ M.open = function(tab_selector, id_or_row)
 			draw()
 		end
 
+		local function change_tab(delta)
+			if delta > 0 then
+				if active_tab < group_count then
+					active_tab = active_tab + 1
+					active_setting_row = 1
+					draw()
+				end
+			else
+				if active_tab > 1 then
+					active_tab = active_tab - 1
+					active_setting_row = 1
+					draw()
+				end
+			end
+		end
+
+		-- Move down (j and Down arrow)
 		vim.api.nvim_buf_set_keymap(buf, "n", "j", "", {
 			nowait = true,
 			noremap = true,
@@ -443,6 +460,15 @@ M.open = function(tab_selector, id_or_row)
 				move_row(1)
 			end,
 		})
+		vim.api.nvim_buf_set_keymap(buf, "n", "<Down>", "", {
+			nowait = true,
+			noremap = true,
+			callback = function()
+				move_row(1)
+			end,
+		})
+
+		-- Move up (k and Up arrow)
 		vim.api.nvim_buf_set_keymap(buf, "n", "k", "", {
 			nowait = true,
 			noremap = true,
@@ -450,27 +476,43 @@ M.open = function(tab_selector, id_or_row)
 				move_row(-1)
 			end,
 		})
+		vim.api.nvim_buf_set_keymap(buf, "n", "<Up>", "", {
+			nowait = true,
+			noremap = true,
+			callback = function()
+				move_row(-1)
+			end,
+		})
 
+		-- Change tab right (l and Right arrow)
 		vim.api.nvim_buf_set_keymap(buf, "n", "l", "", {
 			nowait = true,
 			noremap = true,
 			callback = function()
-				if active_tab < group_count then
-					active_tab = active_tab + 1
-					active_setting_row = 1
-					draw()
-				end
+				change_tab(1)
 			end,
 		})
+		vim.api.nvim_buf_set_keymap(buf, "n", "<Right>", "", {
+			nowait = true,
+			noremap = true,
+			callback = function()
+				change_tab(1)
+			end,
+		})
+
+		-- Change tab left (h and Left arrow)
 		vim.api.nvim_buf_set_keymap(buf, "n", "h", "", {
 			nowait = true,
 			noremap = true,
 			callback = function()
-				if active_tab > 1 then
-					active_tab = active_tab - 1
-					active_setting_row = 1
-					draw()
-				end
+				change_tab(-1)
+			end,
+		})
+		vim.api.nvim_buf_set_keymap(buf, "n", "<Left>", "", {
+			nowait = true,
+			noremap = true,
+			callback = function()
+				change_tab(-1)
 			end,
 		})
 

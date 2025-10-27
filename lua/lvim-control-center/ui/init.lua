@@ -170,11 +170,14 @@ M.open = function(tab_selector, id_or_row)
 	local content_end_line = height - footer_height - 1
 	local content_height = content_end_line - content_start_line + 1
 
+	-- Store tab ranges for mouse click detection
+	local tab_ranges = {}
+
 	local function draw()
 		vim.bo[buf].modifiable = true
 		local lines = {}
 		local tabs = {}
-		local tab_ranges = {}
+		tab_ranges = {} -- Reset tab ranges
 		local col = 0
 
 		for i, group_iter in ipairs(config.groups) do
@@ -196,6 +199,7 @@ M.open = function(tab_selector, id_or_row)
 				icon_start_col = icon_start_col,
 				icon_end_col = icon_end_col,
 				has_icon = has_icon,
+				tab_index = i,
 			})
 			col = tab_end_col
 		end
@@ -312,6 +316,115 @@ M.open = function(tab_selector, id_or_row)
 		vim.bo[buf].modifiable = false
 	end
 
+	local function trigger_setting_action()
+		local group_cr = config.groups[active_tab]
+		local setting = group_cr.settings and group_cr.settings[active_setting_row]
+		if not setting then
+			return
+		end
+
+		local function persist(val)
+			if setting.persist == false then
+				return
+			end
+			data.save_setting(setting, val)
+		end
+
+		if setting.type == "bool" or setting.type == "boolean" then
+			local value = data.load_setting(setting)
+			if value == nil then
+				value = setting.default
+			end
+			value = not value
+			if setting.set then
+				setting.set(value, nil, origin_bufnr)
+			end
+			if (config.neoconf and config.neoconf.write_after_set) ~= false then
+				persist(value)
+			end
+			draw()
+		elseif setting.type == "select" and setting.options then
+			local value = data.load_setting(setting)
+			if value == nil then
+				value = setting.default or setting.options[1]
+			end
+			local idx = 1
+			for i, v in ipairs(setting.options) do
+				if v == value then
+					idx = i
+					break
+				end
+			end
+			local next_val = setting.options[(idx % #setting.options) + 1]
+			if setting.set then
+				setting.set(next_val, nil, origin_bufnr)
+			end
+			if (config.neoconf and config.neoconf.write_after_set) ~= false then
+				persist(next_val)
+			end
+			draw()
+		elseif setting.type == "text" or setting.type == "string" then
+			local prompt = "Set " .. (setting.label or setting.name) .. ":"
+			local current = data.load_setting(setting) or setting.default or ""
+			vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
+				if input then
+					if setting.set then
+						setting.set(input, nil, origin_bufnr)
+					end
+					if (config.neoconf and config.neoconf.write_after_set) ~= false then
+						persist(input)
+					end
+					draw()
+				end
+			end)
+		elseif setting.type == "int" or setting.type == "integer" then
+			local prompt = "Set " .. (setting.label or setting.name) .. ":"
+			local current = data.load_setting(setting) or setting.default or 0
+			vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
+				if input then
+					local num = tonumber(input)
+					if num and math.floor(num) == num then
+						if setting.set then
+							setting.set(num, nil, origin_bufnr)
+						end
+						if (config.neoconf and config.neoconf.write_after_set) ~= false then
+							persist(num)
+						end
+						draw()
+					else
+						vim.notify("Please enter a valid integer!", vim.log.levels.ERROR)
+					end
+				end
+			end)
+		elseif setting.type == "float" or setting.type == "number" then
+			local prompt = "Set " .. (setting.label or setting.name) .. ":"
+			local current = data.load_setting(setting) or setting.default or 0
+			vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
+				if input then
+					local num = tonumber(input)
+					if num then
+						if setting.set then
+							setting.set(num, nil, origin_bufnr)
+						end
+						if (config.neoconf and config.neoconf.write_after_set) ~= false then
+							persist(num)
+						end
+						draw()
+					else
+						vim.notify("Please enter a valid number!", vim.log.levels.ERROR)
+					end
+				end
+			end)
+		elseif setting.type == "action" then
+			if setting.run and type(setting.run) == "function" then
+				setting.run(origin_bufnr)
+			else
+				vim.notify("No action defined for: " .. (setting.label or setting.name), vim.log.levels.WARN)
+			end
+			draw()
+		end
+	end
+
 	local function set_keymaps()
 		local function move_row(delta)
 			local group_move = config.groups[active_tab]
@@ -380,114 +493,7 @@ M.open = function(tab_selector, id_or_row)
 		vim.api.nvim_buf_set_keymap(buf, "n", "<CR>", "", {
 			nowait = true,
 			noremap = true,
-			callback = function()
-				local group_cr = config.groups[active_tab]
-				local setting = group_cr.settings and group_cr.settings[active_setting_row]
-				if not setting then
-					return
-				end
-
-				local function persist(val)
-					if setting.persist == false then
-						return
-					end
-					data.save_setting(setting, val)
-				end
-
-				if setting.type == "bool" or setting.type == "boolean" then
-					local value = data.load_setting(setting)
-					if value == nil then
-						value = setting.default
-					end
-					value = not value
-					if setting.set then
-						setting.set(value, nil, origin_bufnr)
-					end
-					if (config.neoconf and config.neoconf.write_after_set) ~= false then
-						persist(value)
-					end
-					draw()
-				elseif setting.type == "select" and setting.options then
-					local value = data.load_setting(setting)
-					if value == nil then
-						value = setting.default or setting.options[1]
-					end
-					local idx = 1
-					for i, v in ipairs(setting.options) do
-						if v == value then
-							idx = i
-							break
-						end
-					end
-					local next_val = setting.options[(idx % #setting.options) + 1]
-					if setting.set then
-						setting.set(next_val, nil, origin_bufnr)
-					end
-					if (config.neoconf and config.neoconf.write_after_set) ~= false then
-						persist(next_val)
-					end
-					draw()
-				elseif setting.type == "text" or setting.type == "string" then
-					local prompt = "Set " .. (setting.label or setting.name) .. ":"
-					local current = data.load_setting(setting) or setting.default or ""
-					vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
-						if input then
-							if setting.set then
-								setting.set(input, nil, origin_bufnr)
-							end
-							if (config.neoconf and config.neoconf.write_after_set) ~= false then
-								persist(input)
-							end
-							draw()
-						end
-					end)
-				elseif setting.type == "int" or setting.type == "integer" then
-					local prompt = "Set " .. (setting.label or setting.name) .. ":"
-					local current = data.load_setting(setting) or setting.default or 0
-					vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
-						if input then
-							local num = tonumber(input)
-							if num and math.floor(num) == num then
-								if setting.set then
-									setting.set(num, nil, origin_bufnr)
-								end
-								if (config.neoconf and config.neoconf.write_after_set) ~= false then
-									persist(num)
-								end
-								draw()
-							else
-								vim.notify("Please enter a valid integer!", vim.log.levels.ERROR)
-							end
-						end
-					end)
-				elseif setting.type == "float" or setting.type == "number" then
-					local prompt = "Set " .. (setting.label or setting.name) .. ":"
-					local current = data.load_setting(setting) or setting.default or 0
-					vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
-						if input then
-							local num = tonumber(input)
-							if num then
-								if setting.set then
-									setting.set(num, nil, origin_bufnr)
-								end
-								if (config.neoconf and config.neoconf.write_after_set) ~= false then
-									persist(num)
-								end
-								draw()
-							else
-								vim.notify("Please enter a valid number!", vim.log.levels.ERROR)
-							end
-						end
-					end)
-				elseif setting.type == "action" then
-					if setting.run and type(setting.run) == "function" then
-						setting.run(origin_bufnr)
-					else
-						vim.notify("No action defined for: " .. (setting.label or setting.name), vim.log.levels.WARN)
-					end
-					draw()
-				end
-			end,
+			callback = trigger_setting_action,
 		})
 
 		vim.api.nvim_buf_set_keymap(buf, "n", "<BS>", "", {
@@ -529,6 +535,80 @@ M.open = function(tab_selector, id_or_row)
 				end
 
 				draw()
+			end,
+		})
+
+		-- Mouse support
+		vim.api.nvim_buf_set_keymap(buf, "n", "<LeftMouse>", "", {
+			nowait = true,
+			noremap = true,
+			callback = function()
+				local mouse_pos = vim.fn.getmousepos()
+				local click_line = mouse_pos.line
+				local click_col = mouse_pos.column - 1 -- 0-indexed
+
+				-- Check if clicking on tabs (line 1, 0-indexed line 0)
+				if click_line == 1 then
+					for _, tab_range in ipairs(tab_ranges) do
+						if click_col >= tab_range.tab_start_col and click_col < tab_range.tab_end_col then
+							if active_tab ~= tab_range.tab_index then
+								active_tab = tab_range.tab_index
+								active_setting_row = 1
+								draw()
+							end
+							return
+						end
+					end
+				end
+
+				-- Check if clicking on a setting row
+				local current_group = config.groups[active_tab]
+				if current_group and current_group.settings then
+					local content_lines = get_settings_lines(current_group)
+					local setting_row = click_line - header_height
+
+					if setting_row >= 1 and setting_row <= #content_lines then
+						active_setting_row = setting_row
+						draw()
+					end
+				end
+			end,
+		})
+
+		-- Double-click to activate setting
+		vim.api.nvim_buf_set_keymap(buf, "n", "<2-LeftMouse>", "", {
+			nowait = true,
+			noremap = true,
+			callback = function()
+				local mouse_pos = vim.fn.getmousepos()
+				local click_line = mouse_pos.line
+				local click_col = mouse_pos.column - 1
+
+				-- Check if clicking on tabs
+				if click_line == 1 then
+					for _, tab_range in ipairs(tab_ranges) do
+						if click_col >= tab_range.tab_start_col and click_col < tab_range.tab_end_col then
+							if active_tab ~= tab_range.tab_index then
+								active_tab = tab_range.tab_index
+								active_setting_row = 1
+								draw()
+							end
+							return
+						end
+					end
+				end
+
+				-- Check if clicking on a setting row
+				local current_group = config.groups[active_tab]
+				if current_group and current_group.settings then
+					local content_lines = get_settings_lines(current_group)
+					local setting_row = click_line - header_height
+
+					if setting_row >= 1 and setting_row <= #content_lines then
+						active_setting_row = setting_row
+						trigger_setting_action()
+					end
+				end
 			end,
 		})
 	end

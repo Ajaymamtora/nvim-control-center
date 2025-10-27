@@ -20,20 +20,25 @@ local function resolve_path(setting_or_name)
 
 	if type(setting_or_name) == "table" then
 		local s = setting_or_name
+		-- If an explicit path is provided, use it
 		if type(s.path) == "string" and s.path ~= "" then
 			return s.path
 		end
 		local name = s.name or ""
-		if (cfg.respect_dotted_name ~= false) and name:find("%.") then
-			return name
+		-- By default, use the name directly at top level (no prefix)
+		-- Only add prefix if explicitly requested via respect_dotted_name = false
+		if cfg.respect_dotted_name == false then
+			return ("%s.%s"):format(prefix, name)
 		end
-		return ("%s.%s"):format(prefix, name)
+		return name
 	else
 		local name = tostring(setting_or_name or "")
-		if (cfg.respect_dotted_name ~= false) and name:find("%.") then
-			return name
+		-- By default, use the name directly at top level (no prefix)
+		-- Only add prefix if explicitly requested via respect_dotted_name = false
+		if cfg.respect_dotted_name == false then
+			return ("%s.%s"):format(prefix, name)
 		end
-		return ("%s.%s"):format(prefix, name)
+		return name
 	end
 end
 

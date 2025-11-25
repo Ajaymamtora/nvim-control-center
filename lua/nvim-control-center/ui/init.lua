@@ -252,6 +252,15 @@ M.open = function(tab_selector, id_or_row)
 
 	local width, height = get_win_size()
 	local buf = vim.api.nvim_create_buf(false, true)
+
+	local border = config.border
+	if border == nil then
+		border = vim.o.winborder
+		if border == "" then
+			border = "none"
+		end
+	end
+
 	local win = vim.api.nvim_open_win(buf, true, {
 		relative = "editor",
 		width = width,
@@ -259,7 +268,7 @@ M.open = function(tab_selector, id_or_row)
 		row = math.floor((vim.o.lines - height) / 2),
 		col = math.floor((vim.o.columns - width) / 2),
 		zindex = 10,
-		border = config.border or "single",
+		border = border,
 		style = "minimal",
 		noautocmd = false,
 	})

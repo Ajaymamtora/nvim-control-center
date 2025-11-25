@@ -31,7 +31,7 @@ M = {
 		width = 0.8,
 		height = 0.8,
 	},
-	border = { " ", " ", " ", " ", " ", " ", " ", " " },
+	border = nil,
 	icons = {
 		is_true = "",
 		is_false = "",

@@ -9,56 +9,65 @@ local function render_setting_line(setting, value)
 	local label = setting.label or setting.desc or setting.name
 	local t = setting.type
 
-	-- 1. Identity Icon (Col 1)
-	local id_icon = " "
-	if setting.icon then
-		id_icon = setting.icon
-	elseif t == "select" then
-		id_icon = config.icons.is_select
-	elseif t == "int" or t == "integer" then
-		id_icon = config.icons.is_int
-	elseif t == "float" or t == "number" then
-		id_icon = config.icons.is_float
-	elseif t == "text" or t == "string" then
-		id_icon = config.icons.is_string
-	elseif t == "action" then
-		id_icon = config.icons.is_action
-	elseif t == "spacer" then
-		id_icon = config.icons.is_spacer
-	end
-
-	-- 2. Status Icon (Col 2)
-	local status_icon = " "
-	if t == "bool" or t == "boolean" then
-		status_icon = value and config.icons.is_true or config.icons.is_false
-	end
-
-	-- 3. Construct Prefix
 	if t == "spacer_line" then
 		return "", 0
 	end
 
-	local prefix = string.format(" %s %s", id_icon, status_icon)
-	local line = ""
-
+	-- 1. Status Column (Aligned)
+	-- "When something is not a bool, add a "~" char instead of nothing"
+	local status_icon = "~"
 	if t == "bool" or t == "boolean" then
-		line = string.format("%s %s", prefix, label)
-	elseif t == "select" then
-		line = string.format("%s %s: %s", prefix, label, value ~= nil and tostring(value) or "")
-	elseif t == "int" or t == "integer" then
-		line = string.format("%s %s: %d", prefix, label, tonumber(value or 0))
-	elseif t == "float" or t == "number" then
-		line = string.format("%s %s: %s", prefix, label, value ~= nil and tostring(value) or "0")
-	elseif t == "action" then
-		line = string.format("%s %s", prefix, label)
+		status_icon = value and config.icons.is_true or config.icons.is_false
 	elseif t == "spacer" then
-		local spacer_text = setting.label or setting.desc or ""
-		line = string.format("%s %s", prefix, spacer_text)
-	else
-		line = string.format("%s %s: %s", prefix, label, value ~= nil and tostring(value) or "")
+		status_icon = " "
 	end
 
-	return line, #prefix
+	-- 2. Identity Icon (Custom or Default)
+	-- "Place the custom icon after the title"
+	local id_icon = setting.icon
+	if not id_icon then
+		if t == "select" then
+			id_icon = config.icons.is_select
+		elseif t == "int" or t == "integer" then
+			id_icon = config.icons.is_int
+		elseif t == "float" or t == "number" then
+			id_icon = config.icons.is_float
+		elseif t == "text" or t == "string" then
+			id_icon = config.icons.is_string
+		elseif t == "action" then
+			id_icon = config.icons.is_action
+		elseif t == "spacer" then
+			id_icon = config.icons.is_spacer
+		end
+	end
+
+	-- 3. Construct Line
+	local prefix = string.format(" %s ", status_icon)
+	local line_content = label
+
+	if id_icon and id_icon ~= "" then
+		line_content = line_content .. " " .. id_icon
+	end
+
+	if t == "bool" or t == "boolean" then
+		-- No value
+	elseif t == "spacer" then
+		-- No value
+	elseif t == "action" then
+		-- No value
+	else
+		local val_str = ""
+		if t == "int" or t == "integer" then
+			val_str = string.format("%d", tonumber(value or 0))
+		elseif t == "float" or t == "number" then
+			val_str = tostring(value or 0)
+		else
+			val_str = value ~= nil and tostring(value) or ""
+		end
+		line_content = line_content .. ": " .. val_str
+	end
+
+	return prefix .. line_content, #prefix
 end
 
 local function get_settings_lines(group, overrides)

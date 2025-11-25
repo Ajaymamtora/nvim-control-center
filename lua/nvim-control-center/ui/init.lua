@@ -9,43 +9,56 @@ local function render_setting_line(setting, value)
 	local label = setting.label or setting.desc or setting.name
 	local t = setting.type
 
-	local icon = setting.icon
-	if not icon then
-		if t == "bool" or t == "boolean" then
-			icon = value and config.icons.is_true or config.icons.is_false
-		elseif t == "select" then
-			icon = config.icons.is_select
-		elseif t == "int" or t == "integer" then
-			icon = config.icons.is_int
-		elseif t == "float" or t == "number" then
-			icon = config.icons.is_float
-		elseif t == "action" then
-			icon = config.icons.is_action or ""
-		elseif t == "spacer" then
-			icon = config.icons.is_spacer or ""
-		else
-			icon = config.icons.is_string
-		end
+	-- 1. Identity Icon (Col 1)
+	local id_icon = " "
+	if setting.icon then
+		id_icon = setting.icon
+	elseif t == "select" then
+		id_icon = config.icons.is_select
+	elseif t == "int" or t == "integer" then
+		id_icon = config.icons.is_int
+	elseif t == "float" or t == "number" then
+		id_icon = config.icons.is_float
+	elseif t == "text" or t == "string" then
+		id_icon = config.icons.is_string
+	elseif t == "action" then
+		id_icon = config.icons.is_action
+	elseif t == "spacer" then
+		id_icon = config.icons.is_spacer
 	end
 
+	-- 2. Status Icon (Col 2)
+	local status_icon = " "
 	if t == "bool" or t == "boolean" then
-		return string.format(" %s %s", icon, label)
+		status_icon = value and config.icons.is_true or config.icons.is_false
+	end
+
+	-- 3. Construct Prefix
+	if t == "spacer_line" then
+		return "", 0
+	end
+
+	local prefix = string.format(" %s %s", id_icon, status_icon)
+	local line = ""
+
+	if t == "bool" or t == "boolean" then
+		line = string.format("%s %s", prefix, label)
 	elseif t == "select" then
-		return string.format(" %s %s: %s", icon, label, value ~= nil and tostring(value) or "")
+		line = string.format("%s %s: %s", prefix, label, value ~= nil and tostring(value) or "")
 	elseif t == "int" or t == "integer" then
-		return string.format(" %s %s: %d", icon, label, tonumber(value or 0))
+		line = string.format("%s %s: %d", prefix, label, tonumber(value or 0))
 	elseif t == "float" or t == "number" then
-		return string.format(" %s %s: %s", icon, label, value ~= nil and tostring(value) or "0")
+		line = string.format("%s %s: %s", prefix, label, value ~= nil and tostring(value) or "0")
 	elseif t == "action" then
-		return string.format(" %s %s", icon, label)
+		line = string.format("%s %s", prefix, label)
 	elseif t == "spacer" then
 		local spacer_text = setting.label or setting.desc or ""
-		return string.format(" %s %s", icon, spacer_text)
-	elseif t == "spacer_line" then
-		return ""
+		line = string.format("%s %s", prefix, spacer_text)
 	else
-		return string.format(" %s %s: %s", icon, label, value ~= nil and tostring(value) or "")
+		line = string.format("%s %s: %s", prefix, label, value ~= nil and tostring(value) or "")
 	end
+
+	return line, #prefix
 end
 
 local function get_settings_lines(group, overrides)
@@ -61,16 +74,18 @@ local function get_settings_lines(group, overrides)
 					setting.bottom = false
 				end
 				if setting.top then
-					table.insert(lines, render_setting_line({ type = "spacer_line" }, nil))
-					table.insert(meta, { type = "spacer_line" })
+					local line, prefix_len = render_setting_line({ type = "spacer_line" }, nil)
+					table.insert(lines, line)
+					table.insert(meta, { type = "spacer_line", prefix_len = prefix_len })
 				end
 				local value = nil
-				local line = render_setting_line(setting, value)
+				local line, prefix_len = render_setting_line(setting, value)
 				table.insert(lines, line)
-				table.insert(meta, { type = "spacer", setting = setting })
+				table.insert(meta, { type = "spacer", setting = setting, prefix_len = prefix_len })
 				if setting.bottom then
-					table.insert(lines, render_setting_line({ type = "spacer_line" }, nil))
-					table.insert(meta, { type = "spacer_line" })
+					local b_line, b_prefix_len = render_setting_line({ type = "spacer_line" }, nil)
+					table.insert(lines, b_line)
+					table.insert(meta, { type = "spacer_line", prefix_len = b_prefix_len })
 				end
 			else
 				local value
@@ -89,9 +104,9 @@ local function get_settings_lines(group, overrides)
 				if value == nil and setting.default ~= nil and setting.type ~= "action" then
 					value = setting.default
 				end
-				local line = render_setting_line(setting, value)
+				local line, prefix_len = render_setting_line(setting, value)
 				table.insert(lines, line)
-				table.insert(meta, { type = setting.type, setting = setting })
+				table.insert(meta, { type = setting.type, setting = setting, prefix_len = prefix_len })
 			end
 		end
 	end
@@ -398,14 +413,8 @@ M.open = function(tab_selector, id_or_row)
 					or is_spacer_line and "NvimControlCenterSpacerLine"
 					or (is_active and "NvimControlCenterLineActive" or "NvimControlCenterLineInactive")
 
-				local icon_len = 0
-				if is_spacer then
-					icon_len = #(config.icons.is_spacer or " ")
-				elseif is_spacer_line then
-					icon_len = 0
-				else
-					icon_len = 2
-				end
+				local icon_len = m and m.prefix_len or 0
+
 				if icon_len > 0 then
 					vim.api.nvim_buf_set_extmark(buf, ns_id, line_index, 0, {
 						end_col = icon_len,

@@ -18,6 +18,7 @@
 
 - Neovim >= 0.10.0
 - [kkharji/sqlite.lua](https://github.com/kkharji/sqlite.lua) - For settings persistence.
+- [Ajaymamtora/neoconf.nvim](https://github.com/Ajaymamtora/neoconf.nvim) - A fork of folke/neoconf.nvim needed for persistence support.
 
 ## 💾 Installation
 
@@ -28,7 +29,10 @@ It's recommended to use [lazy.nvim](https://github.com/folke/lazy.nvim).
 return {
 	{
 		"lvim-tech/lvim-control-center",
-		dependencies = { "kkharji/sqlite.lua" },
+		dependencies = {
+			"kkharji/sqlite.lua",
+			"Ajaymamtora/neoconf.nvim",
+		},
 		config = function()
 			-- Configuration goes here, see the section below
 			require("lvim-control-center").setup({

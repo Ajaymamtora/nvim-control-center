@@ -98,7 +98,13 @@ This is the default configuration. You can override any of these fields in your 
 		width = 0.8,
 		height = 0.8,
 	},
-	border = { " ", " ", " ", " ", " ", " ", " ", " " },
+	window_size = {
+		width = 0.8,
+		height = 0.8,
+	},
+	border = nil, -- Defaults to vim.o.winborder, or "none" if empty.
+	icons = {
+		is_true = "",
 	icons = {
 		is_true = "",
 		is_false = "",
@@ -233,7 +239,13 @@ require("nvim-control-center").setup({
 		width = 0.8, -- 80% of the editor width
 		height = 0.8, -- 80% of the editor height
 	},
-	border = { " ", " ", " ", " ", " ", " ", " ", " " },
+	window_size = {
+		width = 0.8,
+		height = 0.8,
+	},
+	border = nil, -- Defaults to vim.o.winborder, or "none" if empty.
+	icons = {
+		is_true = "",
 	icons = {
 		is_true = "",
 		is_false = "",

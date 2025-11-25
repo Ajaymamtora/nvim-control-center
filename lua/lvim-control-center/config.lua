@@ -40,6 +40,7 @@ M = {
 		is_float = "",
 		is_string = "󰬶",
 		is_action = "",
+		is_spacer = "➤",
 	},
 	highlights = {
 		LvimControlCenterPanel = { fg = "#505067", bg = "#1a1a22" },
@@ -55,6 +56,8 @@ M = {
 		LvimControlCenterLineInactive = { fg = "#505067", bg = "#1a1a22" },
 		LvimControlCenterIconActive = { fg = "#b65252" },
 		LvimControlCenterIconInactive = { fg = "#a26666" },
+		LvimControlCenterSpacer = { fg = "#b65252" },
+		LvimControlCenterSpacerIcon = { fg = "#4a6494" },
 	},
 
 	-- You pass your groups in via require("lvim-control-center").setup({ groups = { ... } })

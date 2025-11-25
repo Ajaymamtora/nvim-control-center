@@ -48,7 +48,7 @@ local function render_setting_line(setting, value)
 	end
 end
 
-local function get_settings_lines(group)
+local function get_settings_lines(group, overrides)
 	local lines = {}
 	local meta = {}
 	if group and group.settings then
@@ -74,7 +74,9 @@ local function get_settings_lines(group)
 				end
 			else
 				local value
-				if setting.type == "action" then
+				if overrides and overrides[setting.name] ~= nil then
+					value = overrides[setting.name]
+				elseif setting.type == "action" then
 					value = nil
 				elseif setting.get then
 					pcall(function()
@@ -217,8 +219,10 @@ M.open = function(tab_selector, id_or_row)
 		end
 		return 1
 	end
+	
+	local session_overrides = {}
 
-	local content_lines, meta = get_settings_lines(group)
+	local content_lines, meta = get_settings_lines(group, session_overrides)
 	local active_setting_row = get_first_selectable_setting_row(meta)
 	if id_or_row and group and group.settings then
 		for i, m in ipairs(meta) do
@@ -332,7 +336,7 @@ M.open = function(tab_selector, id_or_row)
 		table.insert(lines, sep)
 
 		local current_group = config.groups[active_tab]
-		content_lines, meta = get_settings_lines(current_group)
+		content_lines, meta = get_settings_lines(current_group, session_overrides)
 
 		for _, l in ipairs(content_lines) do
 			table.insert(lines, l)
@@ -504,6 +508,7 @@ M.open = function(tab_selector, id_or_row)
 			if (config.neoconf and config.neoconf.write_after_set) ~= false then
 				persist(value)
 			end
+			session_overrides[setting.name] = value
 			draw()
 		elseif setting.type == "select" and setting.options then
 			local value = data.load_setting(setting)
@@ -524,6 +529,7 @@ M.open = function(tab_selector, id_or_row)
 			if (config.neoconf and config.neoconf.write_after_set) ~= false then
 				persist(next_val)
 			end
+			session_overrides[setting.name] = next_val
 			draw()
 		elseif setting.type == "text" or setting.type == "string" then
 			local prompt = "Set " .. (setting.label or setting.name) .. ":"
@@ -536,6 +542,7 @@ M.open = function(tab_selector, id_or_row)
 					if (config.neoconf and config.neoconf.write_after_set) ~= false then
 						persist(input)
 					end
+					session_overrides[setting.name] = input
 					draw()
 				end
 			end)
@@ -552,6 +559,7 @@ M.open = function(tab_selector, id_or_row)
 						if (config.neoconf and config.neoconf.write_after_set) ~= false then
 							persist(num)
 						end
+						session_overrides[setting.name] = num
 						draw()
 					else
 						vim.notify("Please enter a valid integer!", vim.log.levels.ERROR)
@@ -571,6 +579,7 @@ M.open = function(tab_selector, id_or_row)
 						if (config.neoconf and config.neoconf.write_after_set) ~= false then
 							persist(num)
 						end
+						session_overrides[setting.name] = num
 						draw()
 					else
 						vim.notify("Please enter a valid number!", vim.log.levels.ERROR)
@@ -617,14 +626,14 @@ M.open = function(tab_selector, id_or_row)
 			if delta > 0 then
 				if active_tab < group_count then
 					active_tab = active_tab + 1
-					content_lines, meta = get_settings_lines(config.groups[active_tab])
+					content_lines, meta = get_settings_lines(config.groups[active_tab], session_overrides)
 					active_setting_row = get_first_selectable_setting_row(meta)
 					draw()
 				end
 			else
 				if active_tab > 1 then
 					active_tab = active_tab - 1
-					content_lines, meta = get_settings_lines(config.groups[active_tab])
+					content_lines, meta = get_settings_lines(config.groups[active_tab], session_overrides)
 					active_setting_row = get_first_selectable_setting_row(meta)
 					draw()
 				end
@@ -755,6 +764,7 @@ M.open = function(tab_selector, id_or_row)
 					data.save_setting(setting, prev_val)
 				end
 
+				session_overrides[setting.name] = prev_val
 				draw()
 			end,
 		})
@@ -785,7 +795,7 @@ M.open = function(tab_selector, id_or_row)
 				-- Check if clicking on a setting row
 				local current_group = config.groups[active_tab]
 				if current_group and current_group.settings then
-					local content_lines = get_settings_lines(current_group)
+					local content_lines = get_settings_lines(current_group, session_overrides)
 					local setting_row = click_line - header_height
 
 					if setting_row >= 1 and setting_row <= #content_lines then
@@ -822,7 +832,7 @@ M.open = function(tab_selector, id_or_row)
 				-- Check if clicking on a setting row
 				local current_group = config.groups[active_tab]
 				if current_group and current_group.settings then
-					local content_lines = get_settings_lines(current_group)
+					local content_lines = get_settings_lines(current_group, session_overrides)
 					local setting_row = click_line - header_height
 
 					if setting_row >= 1 and setting_row <= #content_lines then

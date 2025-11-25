@@ -1,5 +1,5 @@
--- lua/lvim-control-center/persistence/data.lua
-local config = require("lvim-control-center.config")
+-- lua/nvim-control-center/persistence/data.lua
+local config = require("nvim-control-center.config")
 
 local M = {}
 
@@ -7,7 +7,7 @@ local function with_neoconf()
 	local ok, neoconf = pcall(require, "neoconf")
 	if not ok then
 		vim.schedule(function()
-			vim.notify("[lvim-control-center] Missing dependency: folke/neoconf.nvim", vim.log.levels.ERROR)
+			vim.notify("[nvim-control-center] Missing dependency: folke/neoconf.nvim", vim.log.levels.ERROR)
 		end)
 		return nil
 	end
@@ -16,7 +16,7 @@ end
 
 local function resolve_path(setting_or_name)
 	local cfg = config.neoconf or {}
-	local prefix = cfg.prefix or "lvim_control_center"
+	local prefix = cfg.prefix or "nvim_control_center"
 
 	if type(setting_or_name) == "table" then
 		local s = setting_or_name
@@ -74,7 +74,7 @@ function M.save_setting(setting, value)
 	if not ok then
 		if err then
 			vim.notify(
-				("[lvim-control-center] Failed to save %s: %s"):format(path, tostring(err)),
+				("[nvim-control-center] Failed to save %s: %s"):format(path, tostring(err)),
 				vim.log.levels.ERROR
 			)
 		end

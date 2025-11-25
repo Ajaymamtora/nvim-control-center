@@ -1,7 +1,7 @@
--- lua/lvim-control-center/ui/init.lua
-local config = require("lvim-control-center.config")
-local highlight = require("lvim-control-center.ui.highlight")
-local data = require("lvim-control-center.persistence.data")
+-- lua/nvim-control-center/ui/init.lua
+local config = require("nvim-control-center.config")
+local highlight = require("nvim-control-center.ui.highlight")
+local data = require("nvim-control-center.persistence.data")
 
 local M = {}
 
@@ -130,7 +130,7 @@ local function apply_cursor_blending(win)
 		return
 	end
 
-	local augroup_name = "LvimControlCenterCursorBlend"
+	local augroup_name = "NvimControlCenterCursorBlend"
 	local cursor_blend_augroup = vim.api.nvim_create_augroup(augroup_name, { clear = true })
 
 	local function set_cursor_blend(value)
@@ -263,13 +263,13 @@ M.open = function(tab_selector, id_or_row)
 		style = "minimal",
 		noautocmd = false,
 	})
-	_G.LVIM_CONTROL_CENTER_WIN = win
+	_G.NVIM_CONTROL_CENTER_WIN = win
 
-	vim.bo[buf].filetype = "lvim-control-center"
+	vim.bo[buf].filetype = "nvim-control-center"
 
 	vim.api.nvim_set_option_value(
 		"winhighlight",
-		"Normal:LvimControlCenterPanel,FloatBorder:LvimControlCenterBorder,Title:LvimControlCenterTitle",
+		"Normal:NvimControlCenterPanel,FloatBorder:NvimControlCenterBorder,Title:NvimControlCenterTitle",
 		{ win = win }
 	)
 
@@ -343,18 +343,18 @@ M.open = function(tab_selector, id_or_row)
 
 		vim.api.nvim_buf_set_lines(buf, 0, -1, false, lines)
 
-		local ns_id = vim.api.nvim_create_namespace("lvim-control-center-tabs")
+		local ns_id = vim.api.nvim_create_namespace("nvim-control-center-tabs")
 		vim.api.nvim_buf_clear_namespace(buf, ns_id, 0, -1)
 
 		local sep_byte_len = #sep
 		vim.api.nvim_buf_set_extmark(buf, ns_id, 1, 0, {
 			end_col = sep_byte_len,
-			hl_group = "LvimControlCenterSeparator",
+			hl_group = "NvimControlCenterSeparator",
 		})
 
 		for _, r in ipairs(tab_ranges) do
-			local tab_hl = r.active and "LvimControlCenterTabActive" or "LvimControlCenterTabInactive"
-			local icon_hl = r.active and "LvimControlCenterTabIconActive" or "LvimControlCenterTabIconInactive"
+			local tab_hl = r.active and "NvimControlCenterTabActive" or "NvimControlCenterTabInactive"
+			local icon_hl = r.active and "NvimControlCenterTabIconActive" or "NvimControlCenterTabIconInactive"
 
 			vim.api.nvim_buf_set_extmark(buf, ns_id, 0, r.tab_start_col, {
 				end_col = r.tab_end_col,
@@ -378,12 +378,12 @@ M.open = function(tab_selector, id_or_row)
 				local is_spacer = m and m.type == "spacer"
 				local is_spacer_line = m and m.type == "spacer_line"
 				local is_active = (active_setting_row == i) and not is_spacer and not is_spacer_line
-				local icon_hl = is_spacer and "LvimControlCenterSpacerIcon"
-					or is_spacer_line and "LvimControlCenterSpacerLine"
-					or (is_active and "LvimControlCenterIconActive" or "LvimControlCenterIconInactive")
-				local line_hl = is_spacer and "LvimControlCenterSpacer"
-					or is_spacer_line and "LvimControlCenterSpacerLine"
-					or (is_active and "LvimControlCenterLineActive" or "LvimControlCenterLineInactive")
+				local icon_hl = is_spacer and "NvimControlCenterSpacerIcon"
+					or is_spacer_line and "NvimControlCenterSpacerLine"
+					or (is_active and "NvimControlCenterIconActive" or "NvimControlCenterIconInactive")
+				local line_hl = is_spacer and "NvimControlCenterSpacer"
+					or is_spacer_line and "NvimControlCenterSpacerLine"
+					or (is_active and "NvimControlCenterLineActive" or "NvimControlCenterLineInactive")
 
 				local icon_len = 0
 				if is_spacer then
@@ -428,7 +428,7 @@ M.open = function(tab_selector, id_or_row)
 		local footer_line_index = #lines - 1
 		vim.api.nvim_buf_set_extmark(buf, ns_id, footer_line_index, 0, {
 			end_col = #lines[#lines],
-			hl_group = "LvimControlCenterStatusLine",
+			hl_group = "NvimControlCenterStatusLine",
 			priority = 100,
 		})
 

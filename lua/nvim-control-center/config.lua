@@ -1,15 +1,15 @@
--- lua/lvim-control-center/config.lua
+-- lua/nvim-control-center/config.lua
 local M = {}
 
 -- NOTE: `save` is kept only for backward-compat comments; no longer used (no SQLite).
 M = {
-	save = "~/.local/share/nvim/lvim-control-center",
+	save = "~/.local/share/nvim/nvim-control-center",
 
 	-- Where/how we persist & read values via neoconf
 	neoconf = {
 		-- All control-center values are stored under this key unless a setting provides its own `path`
-		-- e.g. "lvim_control_center.relativenumber"
-		prefix = "lvim_control_center",
+		-- e.g. "nvim_control_center.relativenumber"
+		prefix = "nvim_control_center",
 
 		-- Default write scope when saving values through neoconf.set
 		--   "local"  -> <project>/.neoconf.json
@@ -43,24 +43,24 @@ M = {
 		is_spacer = "➤",
 	},
 	highlights = {
-		LvimControlCenterPanel = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterSeparator = { fg = "#4a6494" },
-		LvimControlCenterTabActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
-		LvimControlCenterTabInactive = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterTabIconActive = { fg = "#b65252" },
-		LvimControlCenterTabIconInactive = { fg = "#a26666" },
-		LvimControlCenterStatusLine = { fg = "#4a6494" },
-		LvimControlCenterBorder = { fg = "#4a6494", bg = "#1a1a22" },
-		LvimControlCenterTitle = { fg = "#b65252", bg = "#1a1a22", bold = true },
-		LvimControlCenterLineActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
-		LvimControlCenterLineInactive = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterIconActive = { fg = "#b65252" },
-		LvimControlCenterIconInactive = { fg = "#a26666" },
-		LvimControlCenterSpacer = { fg = "#b65252" },
-		LvimControlCenterSpacerIcon = { fg = "#4a6494" },
+		NvimControlCenterPanel = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterSeparator = { fg = "#4a6494" },
+		NvimControlCenterTabActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
+		NvimControlCenterTabInactive = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterTabIconActive = { fg = "#b65252" },
+		NvimControlCenterTabIconInactive = { fg = "#a26666" },
+		NvimControlCenterStatusLine = { fg = "#4a6494" },
+		NvimControlCenterBorder = { fg = "#4a6494", bg = "#1a1a22" },
+		NvimControlCenterTitle = { fg = "#b65252", bg = "#1a1a22", bold = true },
+		NvimControlCenterLineActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
+		NvimControlCenterLineInactive = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterIconActive = { fg = "#b65252" },
+		NvimControlCenterIconInactive = { fg = "#a26666" },
+		NvimControlCenterSpacer = { fg = "#b65252" },
+		NvimControlCenterSpacerIcon = { fg = "#4a6494" },
 	},
 
-	-- You pass your groups in via require("lvim-control-center").setup({ groups = { ... } })
+	-- You pass your groups in via require("nvim-control-center").setup({ groups = { ... } })
 	groups = {},
 }
 

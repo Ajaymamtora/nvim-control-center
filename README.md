@@ -1,8 +1,8 @@
-# LVIM CONTROL CENTER
+# NVIM CONTROL CENTER
 
 [License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)(https://opensource.org/licenses/MIT)
 
-**`Lvim Control Center`** is an elegant and easy-to-configure settings management panel for Neovim. It provides a centralized user interface for quickly changing frequently used options, which are persisted across sessions.
+**`Nvim Control Center`** is an elegant and easy-to-configure settings management panel for Neovim. It provides a centralized user interface for quickly changing frequently used options, which are persisted across sessions.
 
 ## ✨ Features
 
@@ -28,14 +28,14 @@ It's recommended to use [lazy.nvim](https://github.com/folke/lazy.nvim).
 -- lazy.nvim
 return {
 	{
-		"lvim-tech/lvim-control-center",
+		"lvim-tech/nvim-control-center",
 		dependencies = {
 			"kkharji/sqlite.lua",
 			"Ajaymamtora/neoconf.nvim",
 		},
 		config = function()
 			-- Configuration goes here, see the section below
-			require("lvim-control-center").setup({
+			require("nvim-control-center").setup({
 				-- ...
 			})
 		end,
@@ -48,30 +48,30 @@ return {
 ### Open the panel
 
 ```vim
-:LvimControlCenter
+:NvimControlCenter
 ```
 
 ### Jump directly to a tab or setting!
 
 - Open directly to a tab by name/label:
     ```vim
-    :LvimControlCenter general -- name
-    :LvimControlCenter General -- label
+    :NvimControlCenter general -- name
+    :NvimControlCenter General -- label
     ```
 - Open directly to a setting by name (second param is setting's `name`):
     ```vim
-    :LvimControlCenter lsp codelens
+    :NvimControlCenter lsp codelens
     ```
 - Open directly to a setting by its row (as shown in the UI):
 
     ```vim
-    :LvimControlCenter lsp 2
+    :NvimControlCenter lsp 2
     ```
 
 - You can also open from Lua:
     ````lua
-    require("lvim-control-center.ui").open("lsp", "codelens") -- by name
-    require("lvim-control-center.ui").open("lsp", 2) -- by row (number)
+    require("nvim-control-center.ui").open("lsp", "codelens") -- by name
+    require("nvim-control-center.ui").open("lsp", 2) -- by row (number)
       ```
     ````
 
@@ -93,7 +93,7 @@ This is the default configuration. You can override any of these fields in your 
 
 ```lua
 {
-	save = "~/.local/share/nvim/lvim-control-center",
+	save = "~/.local/share/nvim/nvim-control-center",
 	window_size = {
 		width = 0.8,
 		height = 0.8,
@@ -108,18 +108,18 @@ This is the default configuration. You can override any of these fields in your 
 		is_string = "󰬶",
 	},
 	highlights = {
-		LvimControlCenterPanel = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterSeparator = { fg = "#4a6494" },
-		LvimControlCenterTabActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
-		LvimControlCenterTabInactive = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterTabIconActive = { fg = "#b65252" },
-		LvimControlCenterTabIconInactive = { fg = "#a26666" },
-		LvimControlCenterBorder = { fg = "#4a6494", bg = "#1a1a22" },
-		LvimControlCenterTitle = { fg = "#b65252", bg = "#1a1a22", bold = true },
-		LvimControlCenterLineActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
-		LvimControlCenterLineInactive = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterIconActive = { fg = "#b65252" },
-		LvimControlCenterIconInactive = { fg = "#a26666" },
+		NvimControlCenterPanel = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterSeparator = { fg = "#4a6494" },
+		NvimControlCenterTabActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
+		NvimControlCenterTabInactive = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterTabIconActive = { fg = "#b65252" },
+		NvimControlCenterTabIconInactive = { fg = "#a26666" },
+		NvimControlCenterBorder = { fg = "#4a6494", bg = "#1a1a22" },
+		NvimControlCenterTitle = { fg = "#b65252", bg = "#1a1a22", bold = true },
+		NvimControlCenterLineActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
+		NvimControlCenterLineInactive = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterIconActive = { fg = "#b65252" },
+		NvimControlCenterIconInactive = { fg = "#a26666" },
 	},
 }
 ```
@@ -131,7 +131,7 @@ This is the default configuration. You can override any of these fields in your 
 This is an example of how to set up two groups: "General" and "Appearance".
 
 ```lua
--- lua/plugins/lvim-control-center.lua
+-- lua/plugins/nvim-control-center.lua
 
 -- First, define your settings groups in separate files (good practice)
 local general_settings = {
@@ -199,18 +199,18 @@ local appearance_settings = {
 			default = "lvim-darker",
 			break_load = true,
 			get = function()
-				if _G.LVIM_THEME ~= nil then
-					return _G.LVIM_THEME
+				if _G.NVIM_THEME ~= nil then
+					return _G.NVIM_THEME
 				else
 					return "lvim-darker"
 				end
 			end,
 			set = function(val, _)
-				_G.LVIM_THEME = val
+				_G.NVIM_THEME = val
 				vim.cmd("colorscheme " .. val)
-				funcs.write_file(_G.global.lvim_path .. "/.configs/lvim/.theme", _G.LVIM_THEME)
+				funcs.write_file(_G.global.lvim_path .. "/.configs/lvim/.theme", _G.NVIM_THEME)
 				---@diagnostic disable-next-line: undefined-field
-				if _G.LVIM_CONTROL_CENTER_WIN and is_control_center_focused(_G.LVIM_CONTROL_CENTER_WIN) then
+				if _G.NVIM_CONTROL_CENTER_WIN and is_control_center_focused(_G.NVIM_CONTROL_CENTER_WIN) then
 					vim.cmd("hi Cursor blend=100")
 				else
 					vim.cmd("hi Cursor blend=0")
@@ -222,7 +222,7 @@ local appearance_settings = {
 }
 
 -- Now, call the setup function with your groups
-require("lvim-control-center").setup({
+require("nvim-control-center").setup({
 	-- Pass the defined groups here
 	groups = {
 		general_settings,
@@ -243,18 +243,18 @@ require("lvim-control-center").setup({
 		is_string = "󰬶",
 	},
 	highlights = {
-		LvimControlCenterPanel = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterSeparator = { fg = "#4a6494" },
-		LvimControlCenterTabActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
-		LvimControlCenterTabInactive = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterTabIconActive = { fg = "#b65252" },
-		LvimControlCenterTabIconInactive = { fg = "#a26666" },
-		LvimControlCenterBorder = { fg = "#4a6494", bg = "#1a1a22" },
-		LvimControlCenterTitle = { fg = "#b65252", bg = "#1a1a22", bold = true },
-		LvimControlCenterLineActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
-		LvimControlCenterLineInactive = { fg = "#505067", bg = "#1a1a22" },
-		LvimControlCenterIconActive = { fg = "#b65252" },
-		LvimControlCenterIconInactive = { fg = "#a26666" },
+		NvimControlCenterPanel = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterSeparator = { fg = "#4a6494" },
+		NvimControlCenterTabActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
+		NvimControlCenterTabInactive = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterTabIconActive = { fg = "#b65252" },
+		NvimControlCenterTabIconInactive = { fg = "#a26666" },
+		NvimControlCenterBorder = { fg = "#4a6494", bg = "#1a1a22" },
+		NvimControlCenterTitle = { fg = "#b65252", bg = "#1a1a22", bold = true },
+		NvimControlCenterLineActive = { fg = "#1a1a22", bg = "#4a6494", bold = true },
+		NvimControlCenterLineInactive = { fg = "#505067", bg = "#1a1a22" },
+		NvimControlCenterIconActive = { fg = "#b65252" },
+		NvimControlCenterIconInactive = { fg = "#a26666" },
 	},
 })
 ```
@@ -296,23 +296,23 @@ You can change the colors by redefining any of the following highlight groups in
 
 ```lua
 -- Example
-vim.api.nvim_set_hl(0, "LvimControlCenterPanel", { bg = "#2D2A2E" })
-vim.api.nvim_set_hl(0, "LvimControlCenterTabActive", { bg = "#4A454D", fg = "#CAC5CA" })
+vim.api.nvim_set_hl(0, "NvimControlCenterPanel", { bg = "#2D2A2E" })
+vim.api.nvim_set_hl(0, "NvimControlCenterTabActive", { bg = "#4A454D", fg = "#CAC5CA" })
 ```
 
 | Group                              | Description                      |
 | :--------------------------------- | :------------------------------- |
-| `LvimControlCenterPanel`           | Background of the entire panel   |
-| `LvimControlCenterBorder`          | Color of the border              |
-| `LvimControlCenterSeparator`       | The line under the tabs          |
-| `LvimControlCenterTabActive`       | Active tab                       |
-| `LvimControlCenterTabInactive`     | Inactive tab                     |
-| `LvimControlCenterTabIconActive`   | Icon in an active tab            |
-| `LvimControlCenterTabIconInactive` | Icon in an inactive tab          |
-| `LvimControlCenterLineActive`      | Background of the selected row   |
-| `LvimControlCenterLineInactive`    | Background of a non-selected row |
-| `LvimControlCenterIconActive`      | Icon on the selected row         |
-| `LvimControlCenterIconInactive`    | Icon on a non-selected row       |
+| `NvimControlCenterPanel`           | Background of the entire panel   |
+| `NvimControlCenterBorder`          | Color of the border              |
+| `NvimControlCenterSeparator`       | The line under the tabs          |
+| `NvimControlCenterTabActive`       | Active tab                       |
+| `NvimControlCenterTabInactive`     | Inactive tab                     |
+| `NvimControlCenterTabIconActive`   | Icon in an active tab            |
+| `NvimControlCenterTabIconInactive` | Icon in an inactive tab          |
+| `NvimControlCenterLineActive`      | Background of the selected row   |
+| `NvimControlCenterLineInactive`    | Background of a non-selected row |
+| `NvimControlCenterIconActive`      | Icon on the selected row         |
+| `NvimControlCenterIconInactive`    | Icon on a non-selected row       |
 
 ## 🏃 Tips
 

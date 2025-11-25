@@ -1,4 +1,4 @@
-local config = require("lvim-control-center.config")
+local config = require("nvim-control-center.config")
 
 local M = {}
 

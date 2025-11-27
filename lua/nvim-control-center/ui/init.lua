@@ -127,7 +127,8 @@ local function get_keybindings_line(setting_type)
 	local action_bindings = "  Enter: Execute"
 	local edit_bindings = "  Enter: Edit"
 	local toggle_bindings = "  Enter: Toggle"
-	local select_bindings = "  Enter: Next Value  BS: Prev Value"
+	-- UPDATE: Changed "Next Value" to "Select Option"
+	local select_bindings = "  Enter: Select Option  BS: Prev Value"
 
 	if setting_type == "bool" or setting_type == "boolean" then
 		return base_bindings .. toggle_bindings
@@ -243,7 +244,7 @@ M.open = function(tab_selector, id_or_row)
 		end
 		return 1
 	end
-	
+
 	local session_overrides = {}
 
 	local content_lines, meta = get_settings_lines(group, session_overrides)
@@ -529,26 +530,36 @@ M.open = function(tab_selector, id_or_row)
 			session_overrides[setting.name] = value
 			draw()
 		elseif setting.type == "select" and setting.options then
-			local value = data.load_setting(setting)
-			if value == nil then
-				value = setting.default or setting.options[1]
+			-- UPDATE: Replaced Cycle logic with vim.ui.select
+			local current_val = data.load_setting(setting)
+			if current_val == nil then
+				current_val = setting.default or setting.options[1]
 			end
-			local idx = 1
-			for i, v in ipairs(setting.options) do
-				if v == value then
-					idx = i
-					break
+
+			vim.ui.select(setting.options, {
+				prompt = "Select " .. (setting.label or setting.name),
+				format_item = function(item)
+					-- Optionally mark the current item
+					if item == current_val then
+						return tostring(item) .. " *"
+					end
+					return tostring(item)
+				end,
+			}, function(choice)
+				if choice then
+					if setting.set then
+						setting.set(choice, nil, origin_bufnr)
+					end
+					if (config.neoconf and config.neoconf.write_after_set) ~= false then
+						persist(choice)
+					end
+					session_overrides[setting.name] = choice
+					-- Ensure we redraw on the main thread
+					vim.schedule(function()
+						draw()
+					end)
 				end
-			end
-			local next_val = setting.options[(idx % #setting.options) + 1]
-			if setting.set then
-				setting.set(next_val, nil, origin_bufnr)
-			end
-			if (config.neoconf and config.neoconf.write_after_set) ~= false then
-				persist(next_val)
-			end
-			session_overrides[setting.name] = next_val
-			draw()
+			end)
 		elseif setting.type == "text" or setting.type == "string" then
 			local prompt = "Set " .. (setting.label or setting.name) .. ":"
 			local current = data.load_setting(setting) or setting.default or ""

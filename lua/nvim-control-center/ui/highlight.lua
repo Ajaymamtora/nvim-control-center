@@ -14,11 +14,15 @@ end
 M.apply_highlights = function()
 	for group, opts in pairs(config.highlights or {}) do
 		if not get_highlight_from_theme(group) then
-			vim.api.nvim_set_hl(0, group, {
-				fg = opts.fg,
-				bg = opts.bg,
-				bold = opts.bold,
-			})
+			if opts.link then
+				vim.api.nvim_set_hl(0, group, { link = opts.link })
+			else
+				vim.api.nvim_set_hl(0, group, {
+					fg = opts.fg,
+					bg = opts.bg,
+					bold = opts.bold,
+				})
+			end
 		end
 	end
 end

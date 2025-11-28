@@ -9,43 +9,65 @@ local function render_setting_line(setting, value)
 	local label = setting.label or setting.desc or setting.name
 	local t = setting.type
 
-	local icon = setting.icon
-	if not icon then
-		if t == "bool" or t == "boolean" then
-			icon = value and config.icons.is_true or config.icons.is_false
-		elseif t == "select" then
-			icon = config.icons.is_select
+	if t == "spacer_line" then
+		return "", 0
+	end
+
+	-- 1. Status Column (Aligned)
+	-- "When something is not a bool, add a "~" char instead of nothing"
+	local status_icon = "~"
+	if t == "bool" or t == "boolean" then
+		status_icon = value and config.icons.is_true or config.icons.is_false
+	elseif t == "spacer" then
+		status_icon = " "
+	end
+
+	-- 2. Identity Icon (Custom or Default)
+	-- "Place the custom icon after the title"
+	local id_icon = setting.icon
+	if not id_icon then
+		if t == "select" then
+			id_icon = config.icons.is_select
 		elseif t == "int" or t == "integer" then
-			icon = config.icons.is_int
+			id_icon = config.icons.is_int
 		elseif t == "float" or t == "number" then
-			icon = config.icons.is_float
+			id_icon = config.icons.is_float
+		elseif t == "text" or t == "string" then
+			id_icon = config.icons.is_string
 		elseif t == "action" then
-			icon = config.icons.is_action or ""
+			id_icon = config.icons.is_action
 		elseif t == "spacer" then
-			icon = config.icons.is_spacer or ""
-		else
-			icon = config.icons.is_string
+			id_icon = config.icons.is_spacer
 		end
 	end
 
-	if t == "bool" or t == "boolean" then
-		return string.format(" %s %s", icon, label)
-	elseif t == "select" then
-		return string.format(" %s %s: %s", icon, label, value ~= nil and tostring(value) or "")
-	elseif t == "int" or t == "integer" then
-		return string.format(" %s %s: %d", icon, label, tonumber(value or 0))
-	elseif t == "float" or t == "number" then
-		return string.format(" %s %s: %s", icon, label, value ~= nil and tostring(value) or "0")
-	elseif t == "action" then
-		return string.format(" %s %s", icon, label)
-	elseif t == "spacer" then
-		local spacer_text = setting.label or setting.desc or ""
-		return string.format(" %s %s", icon, spacer_text)
-	elseif t == "spacer_line" then
-		return ""
-	else
-		return string.format(" %s %s: %s", icon, label, value ~= nil and tostring(value) or "")
+	-- 3. Construct Line
+	local prefix = string.format(" %s ", status_icon)
+	local line_content = label
+
+	if id_icon and id_icon ~= "" then
+		line_content = line_content .. " " .. id_icon
 	end
+
+	if t == "bool" or t == "boolean" then
+		-- No value
+	elseif t == "spacer" then
+		-- No value
+	elseif t == "action" then
+		-- No value
+	else
+		local val_str = ""
+		if t == "int" or t == "integer" then
+			val_str = string.format("%d", tonumber(value or 0))
+		elseif t == "float" or t == "number" then
+			val_str = tostring(value or 0)
+		else
+			val_str = value ~= nil and tostring(value) or ""
+		end
+		line_content = line_content .. ": " .. val_str
+	end
+
+	return prefix .. line_content, #prefix
 end
 
 local function get_settings_lines(group, overrides)
@@ -61,16 +83,18 @@ local function get_settings_lines(group, overrides)
 					setting.bottom = false
 				end
 				if setting.top then
-					table.insert(lines, render_setting_line({ type = "spacer_line" }, nil))
-					table.insert(meta, { type = "spacer_line" })
+					local line, prefix_len = render_setting_line({ type = "spacer_line" }, nil)
+					table.insert(lines, line)
+					table.insert(meta, { type = "spacer_line", prefix_len = prefix_len })
 				end
 				local value = nil
-				local line = render_setting_line(setting, value)
+				local line, prefix_len = render_setting_line(setting, value)
 				table.insert(lines, line)
-				table.insert(meta, { type = "spacer", setting = setting })
+				table.insert(meta, { type = "spacer", setting = setting, prefix_len = prefix_len })
 				if setting.bottom then
-					table.insert(lines, render_setting_line({ type = "spacer_line" }, nil))
-					table.insert(meta, { type = "spacer_line" })
+					local b_line, b_prefix_len = render_setting_line({ type = "spacer_line" }, nil)
+					table.insert(lines, b_line)
+					table.insert(meta, { type = "spacer_line", prefix_len = b_prefix_len })
 				end
 			else
 				local value
@@ -89,9 +113,9 @@ local function get_settings_lines(group, overrides)
 				if value == nil and setting.default ~= nil and setting.type ~= "action" then
 					value = setting.default
 				end
-				local line = render_setting_line(setting, value)
+				local line, prefix_len = render_setting_line(setting, value)
 				table.insert(lines, line)
-				table.insert(meta, { type = setting.type, setting = setting })
+				table.insert(meta, { type = setting.type, setting = setting, prefix_len = prefix_len })
 			end
 		end
 	end
@@ -103,7 +127,8 @@ local function get_keybindings_line(setting_type)
 	local action_bindings = "  Enter: Execute"
 	local edit_bindings = "  Enter: Edit"
 	local toggle_bindings = "  Enter: Toggle"
-	local select_bindings = "  Enter: Next Value  BS: Prev Value"
+	-- UPDATE: Changed "Next Value" to "Select Option"
+	local select_bindings = "  Enter: Select Option  BS: Prev Value"
 
 	if setting_type == "bool" or setting_type == "boolean" then
 		return base_bindings .. toggle_bindings
@@ -219,7 +244,7 @@ M.open = function(tab_selector, id_or_row)
 		end
 		return 1
 	end
-	
+
 	local session_overrides = {}
 
 	local content_lines, meta = get_settings_lines(group, session_overrides)
@@ -398,14 +423,8 @@ M.open = function(tab_selector, id_or_row)
 					or is_spacer_line and "NvimControlCenterSpacerLine"
 					or (is_active and "NvimControlCenterLineActive" or "NvimControlCenterLineInactive")
 
-				local icon_len = 0
-				if is_spacer then
-					icon_len = #(config.icons.is_spacer or " ")
-				elseif is_spacer_line then
-					icon_len = 0
-				else
-					icon_len = 2
-				end
+				local icon_len = m and m.prefix_len or 0
+
 				if icon_len > 0 then
 					vim.api.nvim_buf_set_extmark(buf, ns_id, line_index, 0, {
 						end_col = icon_len,
@@ -511,26 +530,36 @@ M.open = function(tab_selector, id_or_row)
 			session_overrides[setting.name] = value
 			draw()
 		elseif setting.type == "select" and setting.options then
-			local value = data.load_setting(setting)
-			if value == nil then
-				value = setting.default or setting.options[1]
+			-- UPDATE: Replaced Cycle logic with vim.ui.select
+			local current_val = data.load_setting(setting)
+			if current_val == nil then
+				current_val = setting.default or setting.options[1]
 			end
-			local idx = 1
-			for i, v in ipairs(setting.options) do
-				if v == value then
-					idx = i
-					break
+
+			vim.ui.select(setting.options, {
+				prompt = "Select " .. (setting.label or setting.name),
+				format_item = function(item)
+					-- Optionally mark the current item
+					if item == current_val then
+						return tostring(item) .. " *"
+					end
+					return tostring(item)
+				end,
+			}, function(choice)
+				if choice then
+					if setting.set then
+						setting.set(choice, nil, origin_bufnr)
+					end
+					if (config.neoconf and config.neoconf.write_after_set) ~= false then
+						persist(choice)
+					end
+					session_overrides[setting.name] = choice
+					-- Ensure we redraw on the main thread
+					vim.schedule(function()
+						draw()
+					end)
 				end
-			end
-			local next_val = setting.options[(idx % #setting.options) + 1]
-			if setting.set then
-				setting.set(next_val, nil, origin_bufnr)
-			end
-			if (config.neoconf and config.neoconf.write_after_set) ~= false then
-				persist(next_val)
-			end
-			session_overrides[setting.name] = next_val
-			draw()
+			end)
 		elseif setting.type == "text" or setting.type == "string" then
 			local prompt = "Set " .. (setting.label or setting.name) .. ":"
 			local current = data.load_setting(setting) or setting.default or ""

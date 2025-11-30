@@ -6,10 +6,14 @@ M.merge = function(t1, t2)
 			if M.is_array(t1[k]) then
 				t1[k] = M.concat(t1[k], v)
 			else
+				-- Recursively merge non-array tables to preserve defaults
 				M.merge(t1[k], t2[k])
 			end
 		else
-			t1[k] = v
+			-- Only replace if value is not nil
+			if v ~= nil then
+				t1[k] = v
+			end
 		end
 	end
 	return t1

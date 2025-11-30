@@ -33,26 +33,26 @@ local defaults = {
   border = nil,
 
   -- Title customization
-  title = nil, -- Set to customize title (default: "Control Center")
+  title = nil,      -- Set to customize title (default: "Control Center")
   title_icon = nil, -- Set to customize title icon (default: "󰢚")
 
   icons = {
-    is_true = "",
-    is_false = "",
+    is_true = "",
+    is_false = "",
     is_select = "󱖫",
     is_int = "󰎠",
-    is_float = "",
+    is_float = "",
     is_string = "󰬶",
-    is_action = "",
+    is_action = "",
     is_spacer = "➤",
   },
 
   -- Volt UI options
   volt = {
-    enabled = true, -- Set to false to force fallback to native UI (not recommended)
-    hover_effects = true, -- Enable hover state highlighting
+    enabled = true,        -- Set to false to force fallback to native UI (not recommended)
+    hover_effects = true,  -- Enable hover state highlighting
     smooth_scroll = false, -- Reserved for future smooth scrolling feature
-    animations = false, -- Reserved for future animation support
+    animations = false,    -- Reserved for future animation support
   },
 
   highlights = {

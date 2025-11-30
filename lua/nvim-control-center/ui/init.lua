@@ -262,6 +262,21 @@ end
 local function set_keymaps()
   local buf = state.buf
 
+  -- Safe close function that prevents double-close
+  local function safe_close()
+    if not buf or not vim.api.nvim_buf_is_valid(buf) then
+      return
+    end
+
+    -- Use vim's native window close instead of volt.close
+    local wins = vim.fn.win_findbuf(buf)
+    for _, win in ipairs(wins) do
+      if vim.api.nvim_win_is_valid(win) then
+        pcall(vim.api.nvim_win_close, win, true)
+      end
+    end
+  end
+
   -- Navigation
   vim.api.nvim_buf_set_keymap(buf, "n", "j", "", {
     nowait = true,
@@ -322,28 +337,16 @@ local function set_keymaps()
     end,
   })
 
-  -- Close
+  -- Close with safe handling
   vim.api.nvim_buf_set_keymap(buf, "n", "<Esc>", "", {
     nowait = true,
     noremap = true,
-    callback = function()
-      if volt_available then
-        require("volt").close(state.buf)
-      else
-        vim.api.nvim_win_close(state.win, true)
-      end
-    end,
+    callback = safe_close,
   })
   vim.api.nvim_buf_set_keymap(buf, "n", "q", "", {
     nowait = true,
     noremap = true,
-    callback = function()
-      if volt_available then
-        require("volt").close(state.buf)
-      else
-        vim.api.nvim_win_close(state.win, true)
-      end
-    end,
+    callback = safe_close,
   })
 
   -- Action trigger
@@ -505,14 +508,22 @@ M.open_with_volt = function()
   -- Enable volt events
   events.add(buf)
 
-  -- Setup volt mappings
+  -- Setup volt mappings with proper cleanup
   volt.mappings({
     bufs = { buf },
     winclosed_event = true,
     close_func = function(closed_buf)
       if closed_buf == buf then
+        -- Clean up state first
         state.reset()
       end
+    end,
+    after_close = function()
+      -- Additional cleanup after all windows closed
+      vim.schedule(function()
+        -- Ensure state is fully reset
+        state.reset()
+      end)
     end,
   })
 

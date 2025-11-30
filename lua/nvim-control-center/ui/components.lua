@@ -283,16 +283,12 @@ function M.settings()
       table.insert(line, { "", "NvimControlCenterSpacerLine" })
     elseif is_spacer then
       -- Spacer row with icon and label
-      table.insert(line, { pad(state.xpad), "NvimControlCenterPanel" })
       if type_icon ~= "" then
         table.insert(line, { type_icon .. " ", icon_hl })
       end
       table.insert(line, { label, line_hl })
     else
       -- Regular setting row
-      -- Padding
-      table.insert(line, { pad(state.xpad), "NvimControlCenterPanel", { click = click_action, hover = hover_action } })
-
       -- Status icon (checkbox state or ~)
       table.insert(line, { " " .. status_icon .. " ", icon_hl, { click = click_action, hover = hover_action } })
 

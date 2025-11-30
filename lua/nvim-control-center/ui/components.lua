@@ -98,11 +98,19 @@ function M.tabs()
 
     -- Build the tab with click action
     local click_action = function()
+      -- Validate buffer is still valid before doing anything
+      if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
+        return
+      end
+
       if state.active_tab ~= i then
         state.active_tab = i
         state.active_row = 1
         M.refresh_settings_meta()
-        require("volt").redraw(state.buf, { "tabs", "settings", "footer" })
+        local ok = pcall(require("volt").redraw, state.buf, { "tabs", "settings", "footer" })
+        if not ok then
+          -- Buffer might have been closed, ignore
+        end
       end
     end
 
@@ -110,6 +118,10 @@ function M.tabs()
       id = "tab_" .. i,
       redraw = "tabs",
       callback = function()
+        -- Validate buffer is still valid
+        if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
+          return
+        end
         state.hovered_tab = i
       end,
     }
@@ -210,13 +222,21 @@ function M.settings()
 
     if not is_spacer and not is_spacer_line then
       click_action = function()
+        -- Validate buffer before action
+        if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
+          return
+        end
         state.active_row = i
-        require("volt").redraw(state.buf, { "settings", "footer" })
+        pcall(require("volt").redraw, state.buf, { "settings", "footer" })
       end
       hover_action = {
         id = "setting_" .. i,
         redraw = "settings",
         callback = function()
+          -- Validate buffer before hover callback
+          if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
+            return
+          end
           state.hovered_row = i
         end,
       }

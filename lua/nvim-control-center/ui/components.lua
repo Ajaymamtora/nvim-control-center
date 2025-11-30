@@ -247,7 +247,12 @@ function M.settings()
     -- Build status icon
     local status_icon = " "
     if setting_type == "bool" or setting_type == "boolean" then
-      status_icon = value and config.icons.is_true or config.icons.is_false
+      -- Ensure we have a boolean value (default to false if nil)
+      local bool_val = value
+      if bool_val == nil then
+        bool_val = false
+      end
+      status_icon = bool_val and config.icons.is_true or config.icons.is_false
     elseif not is_spacer and not is_spacer_line then
       status_icon = "~"
     end

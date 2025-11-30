@@ -10,7 +10,7 @@ local M = {
   -- UI dimensions
   width = 60,
   height = 20,
-  xpad = 2,
+  xpad = 0,
 
   -- Navigation state
   active_tab = 1,

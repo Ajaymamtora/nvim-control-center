@@ -548,4 +548,7 @@ M.open_fallback = function()
   -- but the main focus is on the volt-based UI
 end
 
+-- Expose trigger_setting_action for click handlers in components
+M._trigger_setting_action = trigger_setting_action
+
 return M

@@ -226,8 +226,20 @@ function M.settings()
         if not state.buf or not vim.api.nvim_buf_is_valid(state.buf) then
           return
         end
+        -- Set active row and trigger the setting action
         state.active_row = i
         pcall(require("volt").redraw, state.buf, { "settings", "footer" })
+
+        -- Trigger the actual setting action (toggle/edit/etc)
+        vim.schedule(function()
+          if vim.api.nvim_buf_is_valid(state.buf) then
+            -- Get the trigger function from ui/init.lua
+            local ui = require("nvim-control-center.ui")
+            if ui._trigger_setting_action then
+              ui._trigger_setting_action()
+            end
+          end
+        end)
       end
       hover_action = {
         id = "setting_" .. i,

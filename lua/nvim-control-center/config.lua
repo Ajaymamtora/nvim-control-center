@@ -1,8 +1,7 @@
 -- lua/nvim-control-center/config.lua
-local M = {}
 
--- NOTE: `save` is kept only for backward-compat comments; no longer used (no SQLite).
-M = {
+-- Default configuration (immutable)
+local defaults = {
   save = "~/.local/share/nvim/nvim-control-center",
 
   -- Where/how we persist & read values via neoconf
@@ -104,8 +103,14 @@ M = {
   groups = {},
 }
 
+-- Runtime configuration (starts as a copy of defaults, gets merged with user config)
+local M = vim.deepcopy(defaults)
+
 if M.save then
   M.save = vim.fn.expand(M.save)
 end
+
+-- Export defaults for reference (useful for resetting or documentation)
+M._defaults = defaults
 
 return M

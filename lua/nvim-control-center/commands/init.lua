@@ -1,6 +1,7 @@
 local ui = require("nvim-control-center.ui")
 local highlight = require("nvim-control-center.ui.highlight")
 local data = require("nvim-control-center.persistence.data")
+local features = require("nvim-control-center.features")
 
 local M = {}
 
@@ -20,6 +21,7 @@ M.init = function()
 		end,
 	})
 	data.apply_saved_settings()
+	features.apply_saved_settings()
 end
 
 return M

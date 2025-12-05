@@ -4,6 +4,11 @@
 local defaults = {
   save = "~/.local/share/nvim/nvim-control-center",
 
+  -- Feature toggles for plugin-generated functionality
+  features = {
+    lsp_servers = false, -- Enable LSP server toggle tab
+  },
+
   -- Where/how we persist & read values via neoconf
   neoconf = {
     -- All control-center values are stored under this key unless a setting provides its own `path`

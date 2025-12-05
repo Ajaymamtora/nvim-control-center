@@ -100,8 +100,25 @@ local function make_lsp_setting(lsp_name)
 				end
 			end
 
-			-- vim.lsp.enable takes the enabled state (inverse of disabled)
-			vim.lsp.enable(lsp_name, not new_disabled_value)
+			-- Enable/disable the LSP and handle running clients
+			local enabled = not new_disabled_value
+			vim.lsp.enable(lsp_name, enabled)
+
+			if enabled then
+				-- When enabling, trigger LSP to attach to matching buffers
+				-- by triggering FileType event on current buffer
+				local bufnr = vim.api.nvim_get_current_buf()
+				local ft = vim.bo[bufnr].filetype
+				if ft and ft ~= "" then
+					vim.api.nvim_exec_autocmds("FileType", { buffer = bufnr })
+				end
+			else
+				-- When disabling, stop all running clients for this LSP
+				local clients = vim.lsp.get_clients({ name = lsp_name })
+				for _, client in ipairs(clients) do
+					vim.lsp.stop_client(client.id, true) -- force=true for immediate stop
+				end
+			end
 
 			-- Schedule clearing session_overrides AFTER the UI has set it
 			-- This ensures our get() is used for the next redraw

@@ -79,17 +79,11 @@ local function make_lsp_setting(lsp_name)
 		break_load = true,
 		-- get() returns INVERTED for display: not disabled
 		get = function()
-			local disabled = is_disabled_in_neoconf(lsp_name)
-			vim.notify(("[LSP-DEBUG] get(%s): disabled_in_neoconf=%s, returning=%s"):format(
-				lsp_name, tostring(disabled), tostring(not disabled)), vim.log.levels.INFO)
-			return not disabled
+			return not is_disabled_in_neoconf(lsp_name)
 		end,
 		-- set() receives the NEW "disabled" value after UI flips it
 		-- true = user wants to disable, false = user wants to enable
 		set = function(new_disabled_value)
-			vim.notify(("[LSP-DEBUG] set(%s): new_disabled_value=%s"):format(
-				lsp_name, tostring(new_disabled_value)), vim.log.levels.INFO)
-
 			local neoconf_ok, neoconf = pcall(require, "neoconf")
 			if neoconf_ok then
 				local config = get_config()
@@ -98,19 +92,30 @@ local function make_lsp_setting(lsp_name)
 				if new_disabled_value then
 					-- Disabling: set lsp.<name>.disabled = true
 					local path = get_lsp_path(lsp_name)
-					vim.notify(("[LSP-DEBUG]   neoconf.set(%s, true, scope=%s)"):format(path, scope), vim.log.levels.INFO)
-					local ok, err = neoconf.set(path, true, { scope = scope })
-					vim.notify(("[LSP-DEBUG]   result: ok=%s, err=%s"):format(tostring(ok), tostring(err)), vim.log.levels.INFO)
+					neoconf.set(path, true, { scope = scope })
 				else
 					-- Enabling: remove the entire lsp.<name> object by setting it to nil
 					local parent_path = ("lsp.%s"):format(lsp_name)
-					vim.notify(("[LSP-DEBUG]   neoconf.set(%s, nil, scope=%s)"):format(parent_path, scope), vim.log.levels.INFO)
-					local ok, err = neoconf.set(parent_path, nil, { scope = scope })
-					vim.notify(("[LSP-DEBUG]   result: ok=%s, err=%s"):format(tostring(ok), tostring(err)), vim.log.levels.INFO)
+					neoconf.set(parent_path, nil, { scope = scope })
 				end
 			end
+
 			-- vim.lsp.enable takes the enabled state (inverse of disabled)
 			vim.lsp.enable(lsp_name, not new_disabled_value)
+
+			-- Schedule clearing session_overrides AFTER the UI has set it
+			-- This ensures our get() is used for the next redraw
+			vim.schedule(function()
+				local ui_state_ok, ui_state = pcall(require, "nvim-control-center.ui.state")
+				if ui_state_ok and ui_state.session_overrides then
+					ui_state.session_overrides[get_lsp_path(lsp_name)] = nil
+				end
+				-- Trigger another redraw to show correct tick/cross
+				local volt_ok, volt = pcall(require, "volt")
+				if volt_ok and ui_state_ok and ui_state.buf and vim.api.nvim_buf_is_valid(ui_state.buf) then
+					volt.redraw(ui_state.buf, { "settings" })
+				end
+			end)
 		end,
 		persist = false,
 	}

@@ -85,6 +85,13 @@ local function run_task(task_index)
 		return
 	end
 
+	-- Close the control center window before running task
+	-- (task may open files/terminals that would break the UI)
+	local ui_state_ok, ui_state = pcall(require, "nvim-control-center.ui.state")
+	if ui_state_ok and ui_state.win and vim.api.nvim_win_is_valid(ui_state.win) then
+		pcall(vim.api.nvim_win_close, ui_state.win, true)
+	end
+
 	if is_template_task(task) then
 		-- Template task: run by name lookup (finds templates/generators)
 		vim.notify("Running template task: " .. task.name, vim.log.levels.INFO)

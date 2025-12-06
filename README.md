@@ -12,6 +12,14 @@ A customizable control center for Neovim to manage settings and options with an 
 - **Persistent Settings**: Backed by [folke/neoconf.nvim](https://github.com/folke/neoconf.nvim)
 - **Type-Safe Configuration**: Support for booleans, strings, numbers, selects, and actions
 
+### Built-in Feature Modules
+
+| Feature | Description | Documentation |
+|---------|-------------|---------------|
+| **LSP Servers** | Toggle LSP servers on/off per project | [doc/lsp-servers.md](doc/lsp-servers.md) |
+| **Formatters** | Toggle formatters on/off per project | [doc/formatters.md](doc/formatters.md) |
+| **Tasks** | Manage overseer.nvim tasks with auto-run | [doc/tasks.md](doc/tasks.md) |
+
 ## 📦 Installation
 
 ### Requirements
@@ -24,15 +32,22 @@ A customizable control center for Neovim to manage settings and options with an 
 
 ```lua
 {
-  "your-username/nvim-control-center",
+  "Ajaymamtora/nvim-control-center",
   dependencies = {
     "folke/neoconf.nvim",
     "nvzone/volt", -- Optional but highly recommended
   },
   config = function()
     require("nvim-control-center").setup({
+      -- Enable built-in features
+      features = {
+        lsp_servers = true,  -- LSP toggle tab
+        formatters = true,   -- Formatter toggle tab
+        tasks = true,        -- Tasks management tab
+      },
+      -- Your custom groups
       groups = {
-        -- Your configuration groups here
+        -- ...
       },
     })
   end,
@@ -54,13 +69,20 @@ require("nvim-control-center").setup({
   title = "My Control Center",
   title_icon = "󰢚",
 
+  -- Enable built-in feature modules
+  features = {
+    lsp_servers = true,  -- Toggle LSP servers per project
+    formatters = true,   -- Toggle formatters per project
+    tasks = true,        -- Manage overseer.nvim tasks
+  },
+
   -- Volt UI options
   volt = {
     enabled = true,         -- Use volt for enhanced UI
     hover_effects = true,   -- Enable hover state highlighting
   },
 
-  -- Define your setting groups
+  -- Define your custom setting groups
   groups = {
     {
       name = "editor",
@@ -120,6 +142,15 @@ vim.keymap.set("n", "<leader>cc", "<cmd>NvimControlCenter<cr>", { desc = "Contro
 - **Click** settings to select
 - **Double-click** settings to activate
 - **Hover** for visual feedback
+
+## 📚 Feature Documentation
+
+For detailed documentation on built-in features, see:
+
+- **[Features Overview](doc/features.md)** - How features work and how to enable them
+- **[LSP Servers](doc/lsp-servers.md)** - Enable/disable LSP servers per project
+- **[Formatters](doc/formatters.md)** - Enable/disable formatters per project  
+- **[Tasks](doc/tasks.md)** - Manage overseer.nvim tasks with auto-run support
 
 ## ⚙️ Configuration
 
@@ -256,6 +287,22 @@ neoconf = {
 }
 ```
 
+### Dynamic Settings (Advanced)
+
+For features that need to regenerate settings on each render (e.g., expandable forms), use `get_settings` instead of static `settings`:
+
+```lua
+{
+  name = "dynamic_group",
+  label = "Dynamic Group",
+  icon = "",
+  get_settings = function()
+    -- Return fresh settings array on each render
+    return generate_settings_dynamically()
+  end,
+}
+```
+
 ## 🎨 Highlights
 
 The following highlight groups are defined and can be customized:
@@ -298,6 +345,11 @@ lua/nvim-control-center/
 ├── config.lua            # Configuration defaults
 ├── commands/init.lua     # Command registration
 ├── persistence/data.lua  # Neoconf integration
+├── features/             # Built-in feature modules
+│   ├── init.lua          # Feature loader
+│   ├── lsp_servers.lua   # LSP toggle feature
+│   ├── formatters.lua    # Formatter toggle feature
+│   └── tasks.lua         # Tasks management feature
 ├── ui/
 │   ├── init.lua          # Main UI controller
 │   ├── state.lua         # Centralized state management

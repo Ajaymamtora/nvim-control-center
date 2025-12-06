@@ -102,12 +102,13 @@ Clicking "Edit" expands an inline form with editable fields:
   ► Run   ▲ Collapse   ✕ Delete
   ─── Edit Fields ───
     󰏫 Name: npm start
-    󰊕 Type: template
-     Command: 
-     Working Dir: 
-     Arguments: 
-    󰑓 Auto Restart: ✗
+    󰊕 Type: inline
+     Command: npm
+     Working Dir: ./
+     Arguments: run dev
+    󰑓 Auto Restart: ✓
     ▶ 󰒓 Env Variables (2)
+    ▶ 󰘦 Components (1)
     ↩ Revert Changes
     ✓ Done Editing
   ─────────────────
@@ -126,14 +127,28 @@ Expanding "Env Variables" shows individual entries:
       ───────────────────
 ```
 
+Expanding "Components" (inline tasks only) shows toggle checkboxes:
+
+```
+    ▼ 󰘦 Components (1)
+      ─── Components ───
+       dependencies: ✗
+       on_complete_dispose: ✗
+       on_complete_notify: ✓
+       on_complete_restart: ✗
+       ... (18 total)
+      ───────────────────
+```
+
 - **Edit any field** in any order
 - **Changes save immediately** when you press Enter on a field
-- **Auto Restart** toggle: task will restart automatically when it exits
+- **Auto Restart** toggle: adds `on_complete_restart` component at runtime
 - **Env Variables**: expandable section with per-variable editing
   - Click the header to expand/collapse
   - Edit values inline by pressing Enter
   - Delete variables with "✕ Remove"
   - Add new variables with "+ Add Variable"
+- **Components**: select overseer components (inline tasks only)
 - **Revert Changes** rolls back to the state when you started editing
 - **Done Editing** collapses the form
 

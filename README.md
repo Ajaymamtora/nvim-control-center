@@ -286,6 +286,16 @@ neoconf = {
 }
 ```
 
+#### Keymaps
+
+```lua
+keymaps = {
+  neoconf_local = "e", -- Key to open local .neoconf.json (default: "e")
+}
+```
+
+The `e` key in the control center will close the window and run `:Neoconf local` to edit the project's JSON config directly.
+
 #### Per-Setting Options
 
 ```lua

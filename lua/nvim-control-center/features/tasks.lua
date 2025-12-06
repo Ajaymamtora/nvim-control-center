@@ -117,9 +117,19 @@ local function run_task(task_index)
 			env = task.env,
 		}
 
+		-- Handle auto_restart by setting up restart on exit
+		if task.auto_restart then
+			task_def.on_exit = function(_, return_val)
+				vim.schedule(function()
+					vim.notify("Restarting task: " .. task.name, vim.log.levels.INFO)
+					run_task(task_index)
+				end)
+			end
+		end
+
 		local new_task = overseer.new_task(task_def)
 		new_task:start()
-		vim.notify("Started task: " .. task.name, vim.log.levels.INFO)
+		vim.notify("Started task: " .. task.name .. (task.auto_restart and " (auto-restart)" or ""), vim.log.levels.INFO)
 	end
 end
 
@@ -329,6 +339,114 @@ local function make_task_settings(task, index)
 
 		-- Args field (as space-separated string)
 		table.insert(settings, make_task_field_setting(task, index, "args", "Arguments", ""))
+
+		-- Auto-restart toggle (boolean)
+		table.insert(settings, {
+			name = "task_" .. index .. "_field_auto_restart",
+			label = "    󰑓 Auto Restart",
+			type = "bool",
+			default = false,
+			get = function()
+				local tasks = get_tasks_from_neoconf()
+				local t = tasks[index]
+				return t and t.auto_restart == true
+			end,
+			set = function(val)
+				local tasks = get_tasks_from_neoconf()
+				local t = tasks[index]
+				if t then
+					if val then
+						t.auto_restart = true
+					else
+						t.auto_restart = nil -- Remove if false
+					end
+					save_tasks_to_neoconf(tasks)
+				end
+				redraw_ui()
+			end,
+			persist = false,
+		})
+
+		-- Environment variables (KEY=VALUE per line)
+		table.insert(settings, {
+			name = "task_" .. index .. "_field_env",
+			label = "    󰒓 Env Variables",
+			type = "action",
+			run = function()
+				-- Get current env vars
+				local tasks = get_tasks_from_neoconf()
+				local t = tasks[index]
+				local current_env = t and t.env or {}
+
+				-- Convert to lines format
+				local lines = {}
+				for key, value in pairs(current_env) do
+					table.insert(lines, key .. "=" .. tostring(value))
+				end
+				table.sort(lines)
+				local current_text = table.concat(lines, "\n")
+
+				-- Use vim.ui.input for multiline (show current value, explain format)
+				vim.ui.input({
+					prompt = "Env vars (KEY=VALUE, one per line, use \\n for newlines): ",
+					default = current_text:gsub("\n", "\\n"),
+				}, function(input)
+					if input == nil then
+						return -- Cancelled
+					end
+
+					-- Parse input back to env table
+					local new_env = {}
+					if input ~= "" then
+						-- Split by \\n (escaped newlines in input)
+						local parts = vim.split(input, "\\n", { plain = true })
+						for _, part in ipairs(parts) do
+							local trimmed = vim.trim(part)
+							if trimmed ~= "" then
+								local eq_pos = string.find(trimmed, "=")
+								if eq_pos then
+									local key = string.sub(trimmed, 1, eq_pos - 1)
+									local value = string.sub(trimmed, eq_pos + 1)
+									new_env[key] = value
+								end
+							end
+						end
+					end
+
+					-- Save
+					local tasks_new = get_tasks_from_neoconf()
+					local task_new = tasks_new[index]
+					if task_new then
+						if next(new_env) == nil then
+							task_new.env = nil -- Remove if empty
+						else
+							task_new.env = new_env
+						end
+						save_tasks_to_neoconf(tasks_new)
+						local count = 0
+						for _ in pairs(new_env) do
+							count = count + 1
+						end
+						vim.notify(("Set %d env variable(s)"):format(count), vim.log.levels.INFO)
+					end
+					redraw_ui()
+				end)
+			end,
+		})
+
+		-- Show current env var count as info
+		local env_count = 0
+		if task.env and type(task.env) == "table" then
+			for _ in pairs(task.env) do
+				env_count = env_count + 1
+			end
+		end
+		if env_count > 0 then
+			table.insert(settings, {
+				type = "spacer",
+				label = "      (" .. env_count .. " variable" .. (env_count > 1 and "s" or "") .. " set)",
+			})
+		end
 
 		-- Action: Rollback changes
 		table.insert(settings, {

@@ -106,6 +106,9 @@ Clicking "Edit" expands an inline form with editable fields:
      Command: 
      Working Dir: 
      Arguments: 
+    󰑓 Auto Restart: ✗
+    󰒓 Env Variables
+      (2 variables set)
     ↩ Revert Changes
     ✓ Done Editing
   ─────────────────
@@ -185,7 +188,8 @@ end
 | `cmd` | string | No | Command to run (makes task "inline") |
 | `args` | array | No | Command arguments |
 | `cwd` | string | No | Working directory |
-| `env` | object | No | Environment variables |
+| `env` | object | No | Environment variables (KEY=VALUE pairs) |
+| `auto_restart` | boolean | No | Automatically restart task when it exits |
 
 ## Use Cases
 
@@ -204,7 +208,12 @@ end
       "name": "Dev Server",
       "cmd": "npm",
       "args": ["run", "dev"],
-      "start": "auto"
+      "start": "auto",
+      "auto_restart": true,
+      "env": {
+        "NODE_ENV": "development",
+        "PORT": "3000"
+      }
     },
     {
       "name": "Build",

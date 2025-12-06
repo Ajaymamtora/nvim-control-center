@@ -50,7 +50,21 @@ local function delete_task_from_neoconf(index)
 	return save_tasks_to_neoconf(tasks)
 end
 
--- Run a task using overseer.new_task for persistence
+-- Determine if a task is a template reference or a full inline definition
+-- Template tasks: have type="template" OR have name but no cmd
+-- Inline tasks: have cmd defined
+local function is_template_task(task)
+	if task.type == "template" then
+		return true
+	end
+	-- If no cmd is defined, treat as template reference
+	if not task.cmd or task.cmd == "" then
+		return true
+	end
+	return false
+end
+
+-- Run a task - either as template lookup or as inline definition
 local function run_task(task_index)
 	local overseer_ok, overseer = pcall(require, "overseer")
 	if not overseer_ok then
@@ -66,24 +80,32 @@ local function run_task(task_index)
 		return
 	end
 
-	-- Check if cmd is defined
-	if not task.cmd or task.cmd == "" then
-		vim.notify("No command defined for task: " .. (task.name or "unnamed"), vim.log.levels.ERROR)
+	if not task.name or task.name == "" then
+		vim.notify("Task has no name", vim.log.levels.ERROR)
 		return
 	end
 
-	-- Build task definition for overseer
-	local task_def = {
-		name = task.name,
-		cmd = task.cmd,
-		args = task.args,
-		cwd = task.cwd,
-		env = task.env,
-	}
+	if is_template_task(task) then
+		-- Template task: run by name lookup (finds templates/generators)
+		vim.notify("Running template task: " .. task.name, vim.log.levels.INFO)
+		overseer.run_task({
+			name = task.name,
+			autostart = true,
+		})
+	else
+		-- Inline task: create with full definition
+		local task_def = {
+			name = task.name,
+			cmd = task.cmd,
+			args = task.args,
+			cwd = task.cwd,
+			env = task.env,
+		}
 
-	local new_task = overseer.new_task(task_def)
-	new_task:start()
-	vim.notify("Started task: " .. task.name, vim.log.levels.INFO)
+		local new_task = overseer.new_task(task_def)
+		new_task:start()
+		vim.notify("Started task: " .. task.name, vim.log.levels.INFO)
+	end
 end
 
 -- Edit a task via vim.ui.input prompts

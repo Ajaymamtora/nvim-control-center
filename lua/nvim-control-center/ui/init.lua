@@ -27,7 +27,7 @@ end
 local function trigger_setting_action()
   local groups = config.groups or {}
   local group = groups[state.active_tab]
-  if not group or not group.settings then
+  if not group or (not group.settings and not group.get_settings) then
     return
   end
 

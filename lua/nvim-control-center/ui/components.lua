@@ -312,6 +312,9 @@ function M.settings()
         type_icon = config.icons.is_string
       elseif setting_type == "action" then
         type_icon = config.icons.is_action
+      elseif setting_type == "array" then
+        -- Show ▶ or ▼ based on expanded state
+        type_icon = state.expanded_arrays[setting.name] and "▼" or "▶"
       elseif is_spacer then
         type_icon = config.icons.is_spacer
       end
@@ -361,6 +364,183 @@ function M.settings()
 
     table.insert(lines, line)
     table.insert(meta, { type = setting_type, setting = setting, row_index = #lines })
+
+    -- Handle array expansion: if array and expanded, add child settings
+    if setting_type == "array" and state.expanded_arrays[setting.name] then
+      -- Get current array value
+      local arr_value = value or {}
+      if type(arr_value) ~= "table" then
+        arr_value = {}
+      end
+
+      -- Separator
+      table.insert(lines, { { "  ─── Items ───", "NvimControlCenterSeparator" } })
+      table.insert(meta, { type = "spacer", setting = nil, row_index = #lines })
+
+      -- Each array item
+      for idx, item_val in ipairs(arr_value) do
+        local item_line = {}
+        local item_meta_idx = #meta + 1
+
+        -- Make click and hover actions for this item
+        local item_click_action = function()
+          state.active_row = item_meta_idx
+          pcall(require("volt").redraw, state.buf, { "settings", "footer" })
+          vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(state.buf) then
+              local ui = require("nvim-control-center.ui")
+              if ui._trigger_setting_action then
+                ui._trigger_setting_action()
+              end
+            end
+          end)
+        end
+        local item_hover_action = {
+          id = "array_item_" .. setting.name .. "_" .. idx,
+          redraw = "settings",
+          callback = function()
+            if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+              state.hovered_row = item_meta_idx
+            end
+          end,
+        }
+
+        local item_is_active = (item_meta_idx == state.active_row)
+        local item_hl = item_is_active and "NvimControlCenterLineActive" or "NvimControlCenterLineInactive"
+        local item_val_hl = item_is_active and "NvimControlCenterValueActive" or "NvimControlCenterValueInactive"
+
+        -- Item row: "     [idx] value"
+        table.insert(item_line, { "     ", item_hl, { click = item_click_action, hover = item_hover_action } })
+        table.insert(item_line, { "[" .. idx .. "] ", "Comment", { click = item_click_action, hover = item_hover_action } })
+        table.insert(item_line, { tostring(item_val or ""), item_val_hl, { click = item_click_action, hover = item_hover_action } })
+
+        table.insert(lines, item_line)
+        table.insert(meta, {
+          type = "array_item",
+          setting = {
+            name = setting.name .. "_item_" .. idx,
+            parent_setting = setting,
+            item_index = idx,
+            item_value = item_val,
+            set_item = function(index, new_val)
+              local arr = setting.get and setting.get() or {}
+              if type(arr) ~= "table" then arr = {} end
+              arr[index] = new_val
+              if setting.set then
+                setting.set(arr)
+              end
+            end,
+            type = "array_item",
+          },
+          row_index = #lines,
+        })
+
+        -- Delete button for this item
+        local del_meta_idx = #meta + 1
+        local del_click_action = function()
+          state.active_row = del_meta_idx
+          pcall(require("volt").redraw, state.buf, { "settings", "footer" })
+          vim.schedule(function()
+            if vim.api.nvim_buf_is_valid(state.buf) then
+              local ui = require("nvim-control-center.ui")
+              if ui._trigger_setting_action then
+                ui._trigger_setting_action()
+              end
+            end
+          end)
+        end
+        local del_hover_action = {
+          id = "array_del_" .. setting.name .. "_" .. idx,
+          redraw = "settings",
+          callback = function()
+            if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+              state.hovered_row = del_meta_idx
+            end
+          end,
+        }
+
+        local del_is_active = (del_meta_idx == state.active_row)
+        local del_hl = del_is_active and "NvimControlCenterLineActive" or "NvimControlCenterLineInactive"
+
+        local del_line = {}
+        table.insert(del_line, { "       ", del_hl, { click = del_click_action, hover = del_hover_action } })
+        table.insert(del_line, { "✕ Remove", "Comment", { click = del_click_action, hover = del_hover_action } })
+
+        table.insert(lines, del_line)
+        table.insert(meta, {
+          type = "array_remove",
+          setting = {
+            name = setting.name .. "_remove_" .. idx,
+            parent_setting = setting,
+            item_index = idx,
+            remove_item = function(index)
+              local arr = setting.get and setting.get() or {}
+              if type(arr) ~= "table" then arr = {} end
+              table.remove(arr, index)
+              if setting.set then
+                setting.set(arr)
+              end
+            end,
+            type = "array_remove",
+          },
+          row_index = #lines,
+        })
+      end
+
+      -- Add new item action
+      local add_meta_idx = #meta + 1
+      local add_click_action = function()
+        state.active_row = add_meta_idx
+        pcall(require("volt").redraw, state.buf, { "settings", "footer" })
+        vim.schedule(function()
+          if vim.api.nvim_buf_is_valid(state.buf) then
+            local ui = require("nvim-control-center.ui")
+            if ui._trigger_setting_action then
+              ui._trigger_setting_action()
+            end
+          end
+        end)
+      end
+      local add_hover_action = {
+        id = "array_add_" .. setting.name,
+        redraw = "settings",
+        callback = function()
+          if state.buf and vim.api.nvim_buf_is_valid(state.buf) then
+            state.hovered_row = add_meta_idx
+          end
+        end,
+      }
+
+      local add_is_active = (add_meta_idx == state.active_row)
+      local add_hl = add_is_active and "NvimControlCenterLineActive" or "NvimControlCenterLineInactive"
+
+      local add_line = {}
+      table.insert(add_line, { "     ", add_hl, { click = add_click_action, hover = add_hover_action } })
+      table.insert(add_line, { "+ Add Item", "Special", { click = add_click_action, hover = add_hover_action } })
+
+      table.insert(lines, add_line)
+      table.insert(meta, {
+        type = "array_add",
+        setting = {
+          name = setting.name .. "_add",
+          parent_setting = setting,
+          add_item = function(new_val)
+            local arr = setting.get and setting.get() or {}
+            if type(arr) ~= "table" then arr = {} end
+            table.insert(arr, new_val)
+            if setting.set then
+              setting.set(arr)
+            end
+          end,
+          type = "array_add",
+        },
+        row_index = #lines,
+      })
+
+      -- End separator
+      table.insert(lines, { { "  ─────────────", "NvimControlCenterSeparator" } })
+      table.insert(meta, { type = "spacer", setting = nil, row_index = #lines })
+    end
 
     -- Handle spacer bottom line
     if is_spacer and setting.bottom then

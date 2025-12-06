@@ -155,6 +155,43 @@ local function trigger_setting_action()
         end
       end
     end)
+  elseif setting.type == "array" then
+    -- Toggle expand/collapse for array
+    local setting_name = setting.name
+    if state.expanded_arrays[setting_name] then
+      state.expanded_arrays[setting_name] = nil
+    else
+      state.expanded_arrays[setting_name] = true
+    end
+    redraw_ui()
+  elseif setting.type == "array_item" then
+    -- Edit array item value
+    local prompt = "Edit value:"
+    local current = setting.item_value or ""
+    vim.ui.input({ prompt = prompt, default = tostring(current) }, function(input)
+      if input ~= nil then -- Allow empty string but not cancel
+        if setting.set_item then
+          setting.set_item(setting.item_index, input)
+        end
+        redraw_ui()
+      end
+    end)
+  elseif setting.type == "array_add" then
+    -- Add new array item
+    vim.ui.input({ prompt = "New value: " }, function(input)
+      if input ~= nil and input ~= "" then
+        if setting.add_item then
+          setting.add_item(input)
+        end
+        redraw_ui()
+      end
+    end)
+  elseif setting.type == "array_remove" then
+    -- Remove array item
+    if setting.remove_item then
+      setting.remove_item(setting.item_index)
+    end
+    redraw_ui()
   elseif setting.type == "action" then
     if setting.run and type(setting.run) == "function" then
       setting.run(state.origin_bufnr)

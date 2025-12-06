@@ -33,6 +33,9 @@ local M = {
   -- Hover state tracking
   hovered_row = nil,
   hovered_tab = nil,
+
+  -- Expanded array settings (keyed by setting.name)
+  expanded_arrays = {},
 }
 
 -- Reset state for new window
@@ -47,6 +50,7 @@ function M.reset()
   M.tab_ranges = {}
   M.hovered_row = nil
   M.hovered_tab = nil
+  M.expanded_arrays = {}
 end
 
 -- Get content area dimensions

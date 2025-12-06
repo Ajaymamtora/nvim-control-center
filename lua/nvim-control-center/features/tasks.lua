@@ -51,37 +51,40 @@ local function delete_task_from_neoconf(index)
 end
 
 -- Run a task using overseer.new_task for persistence
-local function run_task(task)
+local function run_task(task_index)
 	local overseer_ok, overseer = pcall(require, "overseer")
 	if not overseer_ok then
 		vim.notify("overseer.nvim is not available", vim.log.levels.ERROR)
 		return
 	end
 
+	-- Re-read task from neoconf to get latest state
+	local tasks = get_tasks_from_neoconf()
+	local task = tasks[task_index]
+	if not task then
+		vim.notify("Task not found", vim.log.levels.ERROR)
+		return
+	end
+
+	-- Determine the command: use cmd if set, otherwise use name as the command
+	local cmd = task.cmd
+	if not cmd or cmd == "" then
+		-- Use task name as command (common pattern for VS Code-style tasks like "npm start")
+		cmd = task.name
+	end
+
 	-- Build task definition for overseer
 	local task_def = {
 		name = task.name,
-		cmd = task.cmd,
+		cmd = cmd,
 		args = task.args,
 		cwd = task.cwd,
 		env = task.env,
 	}
 
-	-- If no cmd is set, prompt for it
-	if not task_def.cmd or task_def.cmd == "" then
-		vim.ui.input({ prompt = "Command: " }, function(cmd)
-			if cmd and cmd ~= "" then
-				task_def.cmd = cmd
-				local new_task = overseer.new_task(task_def)
-				new_task:start()
-				vim.notify("Started task: " .. task.name, vim.log.levels.INFO)
-			end
-		end)
-	else
-		local new_task = overseer.new_task(task_def)
-		new_task:start()
-		vim.notify("Started task: " .. task.name, vim.log.levels.INFO)
-	end
+	local new_task = overseer.new_task(task_def)
+	new_task:start()
+	vim.notify("Started task: " .. task.name, vim.log.levels.INFO)
 end
 
 -- Edit a task via vim.ui.input prompts
@@ -160,7 +163,7 @@ local function make_task_settings(task, index)
 		label = "  ► Run",
 		type = "action",
 		run = function()
-			run_task(task)
+			run_task(index)
 		end,
 	})
 

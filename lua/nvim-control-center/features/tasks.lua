@@ -6,6 +6,7 @@ local M = {}
 -- State for expanded task editing
 local expanded_task_index = nil -- Which task is currently expanded for editing
 local original_task_state = nil -- Original state for rollback
+local expanded_env_task_index = nil -- Which task's env vars section is expanded
 
 -- Helper: trigger UI redraw
 local function redraw_ui()
@@ -367,84 +368,141 @@ local function make_task_settings(task, index)
 			persist = false,
 		})
 
-		-- Environment variables (KEY=VALUE per line)
-		table.insert(settings, {
-			name = "task_" .. index .. "_field_env",
-			label = "    󰒓 Env Variables",
-			type = "action",
-			run = function()
-				-- Get current env vars
-				local tasks = get_tasks_from_neoconf()
-				local t = tasks[index]
-				local current_env = t and t.env or {}
-
-				-- Convert to lines format
-				local lines = {}
-				for key, value in pairs(current_env) do
-					table.insert(lines, key .. "=" .. tostring(value))
-				end
-				table.sort(lines)
-				local current_text = table.concat(lines, "\n")
-
-				-- Use vim.ui.input for multiline (show current value, explain format)
-				vim.ui.input({
-					prompt = "Env vars (KEY=VALUE, one per line, use \\n for newlines): ",
-					default = current_text:gsub("\n", "\\n"),
-				}, function(input)
-					if input == nil then
-						return -- Cancelled
-					end
-
-					-- Parse input back to env table
-					local new_env = {}
-					if input ~= "" then
-						-- Split by \\n (escaped newlines in input)
-						local parts = vim.split(input, "\\n", { plain = true })
-						for _, part in ipairs(parts) do
-							local trimmed = vim.trim(part)
-							if trimmed ~= "" then
-								local eq_pos = string.find(trimmed, "=")
-								if eq_pos then
-									local key = string.sub(trimmed, 1, eq_pos - 1)
-									local value = string.sub(trimmed, eq_pos + 1)
-									new_env[key] = value
-								end
-							end
-						end
-					end
-
-					-- Save
-					local tasks_new = get_tasks_from_neoconf()
-					local task_new = tasks_new[index]
-					if task_new then
-						if next(new_env) == nil then
-							task_new.env = nil -- Remove if empty
-						else
-							task_new.env = new_env
-						end
-						save_tasks_to_neoconf(tasks_new)
-						local count = 0
-						for _ in pairs(new_env) do
-							count = count + 1
-						end
-						vim.notify(("Set %d env variable(s)"):format(count), vim.log.levels.INFO)
-					end
-					redraw_ui()
-				end)
-			end,
-		})
-
-		-- Show current env var count as info
+		-- Environment variables header (expandable)
+		local is_env_expanded = (expanded_env_task_index == index)
 		local env_count = 0
 		if task.env and type(task.env) == "table" then
 			for _ in pairs(task.env) do
 				env_count = env_count + 1
 			end
 		end
+
+		local env_icon = is_env_expanded and "▼" or "▶"
+		local env_label = "    " .. env_icon .. " 󰒓 Env Variables"
 		if env_count > 0 then
+			env_label = env_label .. " (" .. env_count .. ")"
+		end
+
+		table.insert(settings, {
+			name = "task_" .. index .. "_env_toggle",
+			label = env_label,
+			type = "action",
+			run = function()
+				if expanded_env_task_index == index then
+					expanded_env_task_index = nil
+				else
+					expanded_env_task_index = index
+				end
+				redraw_ui()
+			end,
+		})
+
+		-- If env section is expanded, show individual env vars
+		if is_env_expanded then
 			table.insert(settings, {
 				type = "spacer",
-				label = "      (" .. env_count .. " variable" .. (env_count > 1 and "s" or "") .. " set)",
+				label = "      ─── Environment ───",
+			})
+
+			-- List each env var with edit/delete
+			if task.env and type(task.env) == "table" then
+				local sorted_keys = {}
+				for k in pairs(task.env) do
+					table.insert(sorted_keys, k)
+				end
+				table.sort(sorted_keys)
+
+				for _, key in ipairs(sorted_keys) do
+					local value = task.env[key]
+					-- Show env var as editable text field
+					table.insert(settings, {
+						name = "task_" .. index .. "_env_" .. key,
+						label = "       " .. key,
+						type = "text",
+						default = "",
+						get = function()
+							local tasks = get_tasks_from_neoconf()
+							local t = tasks[index]
+							return (t and t.env and t.env[key]) or ""
+						end,
+						set = function(val)
+							local tasks = get_tasks_from_neoconf()
+							local t = tasks[index]
+							if t then
+								if not t.env then
+									t.env = {}
+								end
+								if val == "" then
+									t.env[key] = nil
+									-- Remove env table if empty
+									if next(t.env) == nil then
+										t.env = nil
+									end
+								else
+									t.env[key] = val
+								end
+								save_tasks_to_neoconf(tasks)
+							end
+							redraw_ui()
+						end,
+						persist = false,
+					})
+
+					-- Delete button for this env var
+					table.insert(settings, {
+						name = "task_" .. index .. "_env_delete_" .. key,
+						label = "        ✕ Remove " .. key,
+						type = "action",
+						run = function()
+							local tasks = get_tasks_from_neoconf()
+							local t = tasks[index]
+							if t and t.env then
+								t.env[key] = nil
+								if next(t.env) == nil then
+									t.env = nil
+								end
+								save_tasks_to_neoconf(tasks)
+								vim.notify("Removed: " .. key, vim.log.levels.INFO)
+							end
+							redraw_ui()
+						end,
+					})
+				end
+			end
+
+			-- Add new env var action
+			table.insert(settings, {
+				name = "task_" .. index .. "_env_add",
+				label = "       + Add Variable",
+				type = "action",
+				run = function()
+					vim.ui.input({ prompt = "Variable name (e.g. NODE_ENV): " }, function(name)
+						if not name or name == "" then
+							return
+						end
+						vim.ui.input({ prompt = "Value for " .. name .. ": " }, function(value)
+							if value == nil then
+								return
+							end
+							local tasks = get_tasks_from_neoconf()
+							local t = tasks[index]
+							if t then
+								if not t.env then
+									t.env = {}
+								end
+								t.env[name] = value
+								save_tasks_to_neoconf(tasks)
+								vim.notify("Added: " .. name .. "=" .. value, vim.log.levels.INFO)
+							end
+							redraw_ui()
+						end)
+					end)
+				end,
+			})
+
+			table.insert(settings, {
+				type = "spacer",
+				label = "      ───────────────────",
 			})
 		end
 

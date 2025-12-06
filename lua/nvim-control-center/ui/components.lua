@@ -175,13 +175,23 @@ function M.settings()
   local groups = config.groups or {}
   local group = groups[state.active_tab]
 
-  if not group or not group.settings then
+  if not group then
+    table.insert(lines, { { pad(state.xpad) .. "No settings in this group", "Comment" } })
+    return lines
+  end
+
+  -- Support dynamic settings via get_settings() function
+  local settings = group.settings
+  if group.get_settings and type(group.get_settings) == "function" then
+    settings = group.get_settings()
+  end
+
+  if not settings then
     table.insert(lines, { { pad(state.xpad) .. "No settings in this group", "Comment" } })
     return lines
   end
 
   local _, _, content_height = state.get_content_bounds()
-  local settings = group.settings
   local meta = {}
 
   for i, setting in ipairs(settings) do
@@ -426,13 +436,24 @@ end
 function M.refresh_settings_meta()
   local groups = config.groups or {}
   local group = groups[state.active_tab]
-  if not group or not group.settings then
+  if not group then
+    state.settings_meta = {}
+    return
+  end
+
+  -- Support dynamic settings via get_settings() function
+  local settings = group.settings
+  if group.get_settings and type(group.get_settings) == "function" then
+    settings = group.get_settings()
+  end
+
+  if not settings then
     state.settings_meta = {}
     return
   end
 
   local meta = {}
-  for i, setting in ipairs(group.settings) do
+  for i, setting in ipairs(settings) do
     local setting_type = setting.type or "string"
 
     -- Handle spacer top line

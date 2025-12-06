@@ -381,8 +381,8 @@ local function add_new_task()
 	end)
 end
 
--- Generate the group definition with all tasks
-function M.get_group()
+-- Generate settings dynamically (called on each render)
+local function generate_settings()
 	local tasks = get_tasks_from_neoconf()
 	local settings = {}
 
@@ -421,11 +421,16 @@ function M.get_group()
 		run = add_new_task,
 	})
 
+	return settings
+end
+
+-- Generate the group definition with dynamic settings
+function M.get_group()
 	return {
 		name = "tasks",
 		label = "Tasks",
 		icon = "",
-		settings = settings,
+		get_settings = generate_settings, -- Dynamic: regenerates on each render
 	}
 end
 

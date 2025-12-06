@@ -159,7 +159,7 @@ local function make_task_settings(task, index)
 		name = "task_" .. index .. "_run",
 		label = "  ► Run",
 		type = "action",
-		action = function()
+		run = function()
 			run_task(task)
 		end,
 	})
@@ -169,7 +169,7 @@ local function make_task_settings(task, index)
 		name = "task_" .. index .. "_edit",
 		label = "  ✎ Edit",
 		type = "action",
-		action = function()
+		run = function()
 			edit_task(index, vim.deepcopy(task))
 		end,
 	})
@@ -179,7 +179,7 @@ local function make_task_settings(task, index)
 		name = "task_" .. index .. "_delete",
 		label = "  ✕ Delete",
 		type = "action",
-		action = function()
+		run = function()
 			vim.ui.select({ "Yes", "No" }, {
 				prompt = "Delete task '" .. (task.name or "unnamed") .. "'?",
 			}, function(choice)
@@ -274,7 +274,7 @@ function M.get_group()
 		name = "task_add_new",
 		label = "+ Add New Task",
 		type = "action",
-		action = add_new_task,
+		run = add_new_task,
 	})
 
 	return {

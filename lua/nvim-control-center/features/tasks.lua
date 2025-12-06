@@ -7,6 +7,29 @@ local M = {}
 local expanded_task_index = nil -- Which task is currently expanded for editing
 local original_task_state = nil -- Original state for rollback
 local expanded_env_task_index = nil -- Which task's env vars section is expanded
+local expanded_components_task_index = nil -- Which task's components section is expanded
+
+-- Built-in overseer components that can be added to inline tasks
+local BUILTIN_COMPONENTS = {
+	"dependencies",
+	"on_complete_dispose",
+	"on_complete_notify",
+	"on_complete_restart",
+	"on_exit_set_status",
+	"on_output_notify",
+	"on_output_parse",
+	"on_output_quickfix",
+	"on_output_write_file",
+	"on_result_diagnostics",
+	"on_result_diagnostics_quickfix",
+	"on_result_diagnostics_trouble",
+	"on_result_notify",
+	"open_output",
+	"restart_on_save",
+	"run_after",
+	"timeout",
+	"unique",
+}
 
 -- Helper: trigger UI redraw
 local function redraw_ui()
@@ -116,6 +139,7 @@ local function run_task(task_index)
 			args = task.args,
 			cwd = task.cwd,
 			env = task.env,
+			components = task.components,
 		}
 
 		-- Handle auto_restart by setting up restart on exit
@@ -504,6 +528,119 @@ local function make_task_settings(task, index)
 				type = "spacer",
 				label = "      ───────────────────",
 			})
+		end
+
+		-- Components section (only for inline tasks)
+		if not is_template_task(task) then
+			local is_components_expanded = (expanded_components_task_index == index)
+			local components_count = 0
+			if task.components and type(task.components) == "table" then
+				components_count = #task.components
+			end
+
+			local components_icon = is_components_expanded and "▼" or "▶"
+			local components_label = "    " .. components_icon .. " 󰘦 Components"
+			if components_count > 0 then
+				components_label = components_label .. " (" .. components_count .. ")"
+			end
+
+			table.insert(settings, {
+				name = "task_" .. index .. "_components_toggle",
+				label = components_label,
+				type = "action",
+				run = function()
+					if expanded_components_task_index == index then
+						expanded_components_task_index = nil
+					else
+						expanded_components_task_index = index
+					end
+					redraw_ui()
+				end,
+			})
+
+			-- If components section is expanded, show toggleable checkboxes
+			if is_components_expanded then
+				table.insert(settings, {
+					type = "spacer",
+					label = "      ─── Components ───",
+				})
+
+				-- Helper to check if component is enabled
+				local function has_component(comp_name)
+					if not task.components then
+						return false
+					end
+					for _, c in ipairs(task.components) do
+						if type(c) == "string" and c == comp_name then
+							return true
+						elseif type(c) == "table" and c[1] == comp_name then
+							return true
+						end
+					end
+					return false
+				end
+
+				-- Show toggle for each built-in component
+				for _, comp_name in ipairs(BUILTIN_COMPONENTS) do
+					local is_enabled = has_component(comp_name)
+					table.insert(settings, {
+						name = "task_" .. index .. "_component_" .. comp_name,
+						label = "       " .. comp_name,
+						type = "bool",
+						default = false,
+						get = function()
+							local tasks = get_tasks_from_neoconf()
+							local t = tasks[index]
+							if not t or not t.components then
+								return false
+							end
+							for _, c in ipairs(t.components) do
+								if type(c) == "string" and c == comp_name then
+									return true
+								elseif type(c) == "table" and c[1] == comp_name then
+									return true
+								end
+							end
+							return false
+						end,
+						set = function(val)
+							local tasks = get_tasks_from_neoconf()
+							local t = tasks[index]
+							if not t then
+								return
+							end
+							if not t.components then
+								t.components = {}
+							end
+
+							if val then
+								-- Add component (just the name, no params)
+								table.insert(t.components, comp_name)
+								vim.notify("Added component: " .. comp_name, vim.log.levels.INFO)
+							else
+								-- Remove component
+								local new_components = {}
+								for _, c in ipairs(t.components) do
+									local name = type(c) == "string" and c or (type(c) == "table" and c[1])
+									if name ~= comp_name then
+										table.insert(new_components, c)
+									end
+								end
+								t.components = #new_components > 0 and new_components or nil
+								vim.notify("Removed component: " .. comp_name, vim.log.levels.INFO)
+							end
+							save_tasks_to_neoconf(tasks)
+							redraw_ui()
+						end,
+						persist = false,
+					})
+				end
+
+				table.insert(settings, {
+					type = "spacer",
+					label = "      ───────────────────",
+				})
+			end
 		end
 
 		-- Action: Rollback changes

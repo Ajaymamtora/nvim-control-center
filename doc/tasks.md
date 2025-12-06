@@ -208,6 +208,30 @@ end
 | `cwd` | string | No | Working directory |
 | `env` | object | No | Environment variables (KEY=VALUE pairs) |
 | `auto_restart` | boolean | No | Automatically restart task when it exits |
+| `components` | array | No | Overseer components (inline tasks only) |
+
+### Supported Components
+
+The following built-in overseer components can be added via the UI:
+
+- `dependencies` - Set dependencies for task
+- `on_complete_dispose` - Dispose task after completion
+- `on_complete_notify` - Notify when task completes
+- `on_complete_restart` - Restart task on completion
+- `on_exit_set_status` - Set status based on exit code
+- `on_output_notify` - Show output notifications
+- `on_output_parse` - Parse task output
+- `on_output_quickfix` - Send output to quickfix
+- `on_output_write_file` - Write output to file
+- `on_result_diagnostics` - Display diagnostics
+- `on_result_diagnostics_quickfix` - Diagnostics to quickfix
+- `on_result_diagnostics_trouble` - Open trouble.nvim
+- `on_result_notify` - Notify on task results
+- `open_output` - Open task output
+- `restart_on_save` - Restart on buffer save
+- `run_after` - Run other tasks after completion
+- `timeout` - Cancel task on timeout
+- `unique` - Ensure no duplicate tasks
 
 ## Use Cases
 

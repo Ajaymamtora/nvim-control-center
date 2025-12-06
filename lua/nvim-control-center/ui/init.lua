@@ -53,7 +53,15 @@ local function trigger_setting_action()
   end
 
   if setting.type == "bool" or setting.type == "boolean" then
-    local value = data.load_setting(setting)
+    -- Use setting.get() if available (for dynamic settings), otherwise load from neoconf
+    local value
+    if type(setting.get) == "function" then
+      local ok, val = pcall(setting.get)
+      if ok then value = val end
+    end
+    if value == nil then
+      value = data.load_setting(setting)
+    end
     if value == nil then
       value = setting.default
     end

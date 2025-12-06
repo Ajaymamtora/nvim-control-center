@@ -352,6 +352,14 @@ function M.settings()
           val_str = string.format("%d", tonumber(value or 0))
         elseif setting_type == "float" or setting_type == "number" then
           val_str = tostring(value or 0)
+        elseif setting_type == "array" then
+          -- Show item count for arrays
+          if type(value) == "table" then
+            local count = #value
+            val_str = "(" .. count .. " item" .. (count ~= 1 and "s" or "") .. ")"
+          else
+            val_str = "(0 items)"
+          end
         elseif value ~= nil then
           val_str = tostring(value)
         end

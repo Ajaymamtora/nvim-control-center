@@ -14,10 +14,12 @@ local function get_lsp_path(lsp_name)
 end
 
 -- Get all configured LSP servers
+-- Includes both enabled servers and servers marked as disabled in neoconf
 local function get_configured_servers()
 	local servers = {}
 	local seen = {}
 
+	-- Method 1: Check vim.lsp._enabled_configs (enabled servers)
 	if vim.lsp._enabled_configs and type(vim.lsp._enabled_configs) == "table" then
 		for name, _ in pairs(vim.lsp._enabled_configs) do
 			if type(name) == "string" and not seen[name] then
@@ -27,6 +29,7 @@ local function get_configured_servers()
 		end
 	end
 
+	-- Method 2: Try rawget on vim.lsp.config
 	local lsp_config = rawget(vim.lsp, "config")
 	if lsp_config and type(lsp_config) == "table" then
 		pcall(function()
@@ -39,12 +42,31 @@ local function get_configured_servers()
 		end)
 	end
 
+	-- Method 3: Get currently active clients as fallback
 	if #servers == 0 then
 		local clients = vim.lsp.get_clients()
 		for _, client in ipairs(clients) do
 			if client.name and not seen[client.name] then
 				seen[client.name] = true
 				table.insert(servers, client.name)
+			end
+		end
+	end
+
+	-- Method 4: Include servers marked as disabled in neoconf
+	-- This ensures disabled servers still appear so they can be re-enabled
+	local neoconf_ok, neoconf = pcall(require, "neoconf")
+	if neoconf_ok then
+		local lsp_settings = neoconf.get("lsp", nil, { ["local"] = true, global = true })
+		if type(lsp_settings) == "table" then
+			for name, server_config in pairs(lsp_settings) do
+				if type(name) == "string" and type(server_config) == "table" and not seen[name] then
+					-- Check if this server entry has a disabled flag
+					if server_config.disabled ~= nil then
+						seen[name] = true
+						table.insert(servers, name)
+					end
+				end
 			end
 		end
 	end

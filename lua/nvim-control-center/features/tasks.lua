@@ -3,6 +3,21 @@
 
 local M = {}
 
+-- State for expanded task editing
+local expanded_task_index = nil -- Which task is currently expanded for editing
+local original_task_state = nil -- Original state for rollback
+
+-- Helper: trigger UI redraw
+local function redraw_ui()
+	vim.schedule(function()
+		local ui_state_ok, ui_state = pcall(require, "nvim-control-center.ui.state")
+		local volt_ok, volt = pcall(require, "volt")
+		if volt_ok and ui_state_ok and ui_state.buf and vim.api.nvim_buf_is_valid(ui_state.buf) then
+			volt.redraw(ui_state.buf, { "settings" })
+		end
+	end)
+end
+
 -- Get config lazily to ensure user config is merged
 local function get_config()
 	return require("nvim-control-center.config")
@@ -51,13 +66,10 @@ local function delete_task_from_neoconf(index)
 end
 
 -- Determine if a task is a template reference or a full inline definition
--- Template tasks: have type="template" OR have name but no cmd
--- Inline tasks: have cmd defined
 local function is_template_task(task)
 	if task.type == "template" then
 		return true
 	end
-	-- If no cmd is defined, treat as template reference
 	if not task.cmd or task.cmd == "" then
 		return true
 	end
@@ -72,7 +84,6 @@ local function run_task(task_index)
 		return
 	end
 
-	-- Re-read task from neoconf to get latest state
 	local tasks = get_tasks_from_neoconf()
 	local task = tasks[task_index]
 	if not task then
@@ -86,21 +97,18 @@ local function run_task(task_index)
 	end
 
 	-- Close the control center window before running task
-	-- (task may open files/terminals that would break the UI)
 	local ui_state_ok, ui_state = pcall(require, "nvim-control-center.ui.state")
 	if ui_state_ok and ui_state.win and vim.api.nvim_win_is_valid(ui_state.win) then
 		pcall(vim.api.nvim_win_close, ui_state.win, true)
 	end
 
 	if is_template_task(task) then
-		-- Template task: run by name lookup (finds templates/generators)
 		vim.notify("Running template task: " .. task.name, vim.log.levels.INFO)
 		overseer.run_task({
 			name = task.name,
 			autostart = true,
 		})
 	else
-		-- Inline task: create with full definition
 		local task_def = {
 			name = task.name,
 			cmd = task.cmd,
@@ -115,77 +123,147 @@ local function run_task(task_index)
 	end
 end
 
--- Edit a task via vim.ui.input prompts
-local function edit_task(index, task)
-	local fields = { "name", "cmd", "cwd" }
-	local current_field = 1
-
-	local function prompt_next_field()
-		if current_field > #fields then
-			-- All fields done, save the task
-			update_task_in_neoconf(index, task)
-			vim.notify("Task updated: " .. task.name, vim.log.levels.INFO)
-
-			-- Trigger UI redraw
-			vim.schedule(function()
-				local ui_state_ok, ui_state = pcall(require, "nvim-control-center.ui.state")
-				local volt_ok, volt = pcall(require, "volt")
-				if volt_ok and ui_state_ok and ui_state.buf and vim.api.nvim_buf_is_valid(ui_state.buf) then
-					volt.redraw(ui_state.buf, { "settings" })
-				end
-			end)
-			return
-		end
-
-		local field = fields[current_field]
-		local current_value = task[field] or ""
-		if type(current_value) == "table" then
-			current_value = table.concat(current_value, " ")
-		end
-
-		vim.ui.input({
-			prompt = field:sub(1, 1):upper() .. field:sub(2) .. ": ",
-			default = current_value,
-		}, function(value)
-			if value ~= nil then
-				if value == "" then
-					task[field] = nil
-				else
-					task[field] = value
-				end
-			end
-			current_field = current_field + 1
-			prompt_next_field()
-		end)
+-- Toggle task expansion for editing
+local function toggle_task_edit(index)
+	local tasks = get_tasks_from_neoconf()
+	local task = tasks[index]
+	if not task then
+		return
 	end
 
-	prompt_next_field()
+	if expanded_task_index == index then
+		-- Collapse: already expanded, close it
+		expanded_task_index = nil
+		original_task_state = nil
+	else
+		-- Expand: save original state for rollback and expand
+		expanded_task_index = index
+		original_task_state = vim.deepcopy(task)
+	end
+	redraw_ui()
+end
+
+-- Rollback task to original state
+local function rollback_task(index)
+	if original_task_state and expanded_task_index == index then
+		update_task_in_neoconf(index, original_task_state)
+		vim.notify("Reverted changes to: " .. (original_task_state.name or "unnamed"), vim.log.levels.INFO)
+		expanded_task_index = nil
+		original_task_state = nil
+		redraw_ui()
+	end
+end
+
+-- Close expanded edit (save and close)
+local function close_task_edit(index)
+	if expanded_task_index == index then
+		expanded_task_index = nil
+		original_task_state = nil
+		vim.notify("Changes saved", vim.log.levels.INFO)
+		redraw_ui()
+	end
+end
+
+-- Create editable field setting for a task property
+local function make_task_field_setting(task, index, field_name, label, icon)
+	return {
+		name = "task_" .. index .. "_field_" .. field_name,
+		label = "    " .. (icon or "") .. " " .. label,
+		type = "text",
+		default = "",
+		get = function()
+			-- Re-read from neoconf for fresh value
+			local tasks = get_tasks_from_neoconf()
+			local t = tasks[index]
+			if t and t[field_name] then
+				local val = t[field_name]
+				if type(val) == "table" then
+					return table.concat(val, " ")
+				end
+				return tostring(val)
+			end
+			return ""
+		end,
+		set = function(val)
+			local tasks = get_tasks_from_neoconf()
+			local t = tasks[index]
+			if t then
+				if val == "" then
+					t[field_name] = nil
+				else
+					t[field_name] = val
+				end
+				save_tasks_to_neoconf(tasks)
+			end
+		end,
+		persist = false,
+	}
+end
+
+-- Create type selector for task (template vs inline)
+local function make_task_type_setting(task, index)
+	return {
+		name = "task_" .. index .. "_field_type",
+		label = "    󰊕 Type",
+		type = "select",
+		options = { "inline", "template" },
+		default = "inline",
+		get = function()
+			local tasks = get_tasks_from_neoconf()
+			local t = tasks[index]
+			if t and t.type == "template" then
+				return "template"
+			end
+			return "inline"
+		end,
+		set = function(val)
+			local tasks = get_tasks_from_neoconf()
+			local t = tasks[index]
+			if t then
+				if val == "template" then
+					t.type = "template"
+				else
+					t.type = nil -- inline is default, don't store
+				end
+				save_tasks_to_neoconf(tasks)
+			end
+		end,
+		persist = false,
+	}
 end
 
 -- Create setting definition for a single task
 local function make_task_settings(task, index)
 	local settings = {}
+	local is_expanded = (expanded_task_index == index)
 
-	-- Task name with start mode selector
+	-- Task header with name and start mode selector
 	local start_options = { "auto", "once", "disabled" }
+	local expand_icon = is_expanded and "▼" or "▶"
 
 	table.insert(settings, {
-		name = "task_" .. index .. "_start",
-		label = task.name or ("Task " .. index),
+		name = "task_" .. index .. "_header",
+		label = expand_icon .. " " .. (task.name or ("Task " .. index)),
 		type = "select",
 		options = start_options,
 		default = "disabled",
 		get = function()
-			return task.start or "disabled"
+			local tasks = get_tasks_from_neoconf()
+			local t = tasks[index]
+			return (t and t.start) or "disabled"
 		end,
 		set = function(val)
-			task.start = val
-			update_task_in_neoconf(index, task)
+			local tasks = get_tasks_from_neoconf()
+			local t = tasks[index]
+			if t then
+				t.start = val
+				save_tasks_to_neoconf(tasks)
+			end
 		end,
 		persist = false,
 	})
 
-	-- Action: Run Now
+	-- Action row: Run, Edit, Delete
 	table.insert(settings, {
 		name = "task_" .. index .. "_run",
 		label = "  ► Run",
@@ -195,17 +273,15 @@ local function make_task_settings(task, index)
 		end,
 	})
 
-	-- Action: Edit
 	table.insert(settings, {
 		name = "task_" .. index .. "_edit",
-		label = "  ✎ Edit",
+		label = is_expanded and "  ▲ Collapse" or "  ✎ Edit",
 		type = "action",
 		run = function()
-			edit_task(index, vim.deepcopy(task))
+			toggle_task_edit(index)
 		end,
 	})
 
-	-- Action: Delete
 	table.insert(settings, {
 		name = "task_" .. index .. "_delete",
 		label = "  ✕ Delete",
@@ -215,21 +291,66 @@ local function make_task_settings(task, index)
 				prompt = "Delete task '" .. (task.name or "unnamed") .. "'?",
 			}, function(choice)
 				if choice == "Yes" then
+					-- Collapse if expanded
+					if expanded_task_index == index then
+						expanded_task_index = nil
+						original_task_state = nil
+					end
 					delete_task_from_neoconf(index)
 					vim.notify("Deleted task: " .. (task.name or "unnamed"), vim.log.levels.INFO)
-
-					-- Trigger UI redraw
-					vim.schedule(function()
-						local ui_state_ok, ui_state = pcall(require, "nvim-control-center.ui.state")
-						local volt_ok, volt = pcall(require, "volt")
-						if volt_ok and ui_state_ok and ui_state.buf and vim.api.nvim_buf_is_valid(ui_state.buf) then
-							volt.redraw(ui_state.buf, { "settings" })
-						end
-					end)
+					redraw_ui()
 				end
 			end)
 		end,
 	})
+
+	-- If expanded, show editable fields
+	if is_expanded then
+		table.insert(settings, {
+			type = "spacer",
+			label = "  ─── Edit Fields ───",
+		})
+
+		-- Name field
+		table.insert(settings, make_task_field_setting(task, index, "name", "Name", "󰏫"))
+
+		-- Type selector (template vs inline)
+		table.insert(settings, make_task_type_setting(task, index))
+
+		-- Command field
+		table.insert(settings, make_task_field_setting(task, index, "cmd", "Command", ""))
+
+		-- CWD field
+		table.insert(settings, make_task_field_setting(task, index, "cwd", "Working Dir", ""))
+
+		-- Args field (as space-separated string)
+		table.insert(settings, make_task_field_setting(task, index, "args", "Arguments", ""))
+
+		-- Action: Rollback changes
+		table.insert(settings, {
+			name = "task_" .. index .. "_rollback",
+			label = "    ↩ Revert Changes",
+			type = "action",
+			run = function()
+				rollback_task(index)
+			end,
+		})
+
+		-- Action: Done editing
+		table.insert(settings, {
+			name = "task_" .. index .. "_done",
+			label = "    ✓ Done Editing",
+			type = "action",
+			run = function()
+				close_task_edit(index)
+			end,
+		})
+
+		table.insert(settings, {
+			type = "spacer",
+			label = "  ─────────────────",
+		})
+	end
 
 	return settings
 end
@@ -241,30 +362,22 @@ local function add_new_task()
 			return
 		end
 
-		vim.ui.input({ prompt = "Command (optional): " }, function(cmd)
-			local new_task = {
-				name = name,
-				start = "disabled",
-			}
-			if cmd and cmd ~= "" then
-				new_task.cmd = cmd
-			end
+		local new_task = {
+			name = name,
+			start = "disabled",
+		}
 
-			local tasks = get_tasks_from_neoconf()
-			table.insert(tasks, new_task)
-			save_tasks_to_neoconf(tasks)
+		local tasks = get_tasks_from_neoconf()
+		table.insert(tasks, new_task)
+		save_tasks_to_neoconf(tasks)
 
-			vim.notify("Created task: " .. name, vim.log.levels.INFO)
+		vim.notify("Created task: " .. name .. " (click Edit to configure)", vim.log.levels.INFO)
 
-			-- Trigger UI redraw
-			vim.schedule(function()
-				local ui_state_ok, ui_state = pcall(require, "nvim-control-center.ui.state")
-				local volt_ok, volt = pcall(require, "volt")
-				if volt_ok and ui_state_ok and ui_state.buf and vim.api.nvim_buf_is_valid(ui_state.buf) then
-					volt.redraw(ui_state.buf, { "settings" })
-				end
-			end)
-		end)
+		-- Auto-expand the new task for editing
+		expanded_task_index = #tasks + 1 -- Will be correct after redraw
+		original_task_state = vim.deepcopy(new_task)
+
+		redraw_ui()
 	end)
 end
 
@@ -287,7 +400,7 @@ function M.get_group()
 			end
 
 			-- Add separator between tasks (except after last one)
-			if index < #tasks then
+			if index < #tasks and expanded_task_index ~= index then
 				table.insert(settings, {
 					type = "spacer",
 					label = "",
@@ -317,15 +430,15 @@ function M.get_group()
 end
 
 -- Apply saved task settings on startup
--- This calls the user's existing auto-start logic
 function M.apply_saved_settings()
 	-- We don't auto-start here - the user's utils/overseer.lua handles that
-	-- via persisted.nvim integration
 end
 
 -- Initialize the feature
 function M.init()
-	-- Nothing needed
+	-- Reset expansion state
+	expanded_task_index = nil
+	original_task_state = nil
 end
 
 return M

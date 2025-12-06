@@ -8,6 +8,7 @@ local defaults = {
   features = {
     lsp_servers = false, -- Enable LSP server toggle tab
     formatters = false, -- Enable formatter toggle tab
+    tasks = false, -- Enable overseer tasks management tab
   },
 
   -- Where/how we persist & read values via neoconf

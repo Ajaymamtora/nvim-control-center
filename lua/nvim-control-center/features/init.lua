@@ -12,6 +12,7 @@ end
 local feature_modules = {
 	lsp_servers = "nvim-control-center.features.lsp_servers",
 	formatters = "nvim-control-center.features.formatters",
+	tasks = "nvim-control-center.features.tasks",
 }
 
 -- Loaded feature instances

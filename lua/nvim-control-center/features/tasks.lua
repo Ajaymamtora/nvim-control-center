@@ -133,28 +133,35 @@ local function run_task(task_index)
 			autostart = true,
 		})
 	else
+		-- Build components list, merging auto_restart as on_complete_restart
+		local components = task.components and vim.deepcopy(task.components) or {}
+		if task.auto_restart then
+			-- Add on_complete_restart if not already present
+			local has_restart = false
+			for _, c in ipairs(components) do
+				local name = type(c) == "string" and c or (type(c) == "table" and c[1])
+				if name == "on_complete_restart" then
+					has_restart = true
+					break
+				end
+			end
+			if not has_restart then
+				table.insert(components, "on_complete_restart")
+			end
+		end
+
 		local task_def = {
 			name = task.name,
 			cmd = task.cmd,
 			args = task.args,
 			cwd = task.cwd,
 			env = task.env,
-			components = task.components,
+			components = #components > 0 and components or nil,
 		}
-
-		-- Handle auto_restart by setting up restart on exit
-		if task.auto_restart then
-			task_def.on_exit = function(_, return_val)
-				vim.schedule(function()
-					vim.notify("Restarting task: " .. task.name, vim.log.levels.INFO)
-					run_task(task_index)
-				end)
-			end
-		end
 
 		local new_task = overseer.new_task(task_def)
 		new_task:start()
-		vim.notify("Started task: " .. task.name .. (task.auto_restart and " (auto-restart)" or ""), vim.log.levels.INFO)
+		vim.notify("Started task: " .. task.name, vim.log.levels.INFO)
 	end
 end
 

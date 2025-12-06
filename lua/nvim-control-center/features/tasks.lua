@@ -207,11 +207,15 @@ local function make_task_type_setting(task, index)
 		label = "    󰊕 Type",
 		type = "select",
 		options = { "inline", "template" },
-		default = "inline",
+		default = "template",
 		get = function()
 			local tasks = get_tasks_from_neoconf()
 			local t = tasks[index]
-			if t and t.type == "template" then
+			if not t then
+				return "template"
+			end
+			-- Use is_template_task logic: explicit type OR no cmd means template
+			if is_template_task(t) then
 				return "template"
 			end
 			return "inline"

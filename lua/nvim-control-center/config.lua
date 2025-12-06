@@ -62,6 +62,11 @@ local defaults = {
     animations = false,    -- Reserved for future animation support
   },
 
+  -- Keymaps within the control center UI
+  keymaps = {
+    neoconf_local = "e", -- Open local .neoconf.json file
+  },
+
   highlights = {
     -- Window background and borders
     NvimControlCenterPanel = { link = "NormalFloat" },

@@ -372,6 +372,17 @@ local function set_keymaps()
       cycle_select_value(-1)
     end,
   })
+
+  -- Open local neoconf file (configurable key)
+  local neoconf_key = config.keymaps and config.keymaps.neoconf_local or "e"
+  vim.api.nvim_buf_set_keymap(buf, "n", neoconf_key, "", {
+    nowait = true,
+    noremap = true,
+    callback = function()
+      safe_close()
+      vim.cmd("Neoconf local")
+    end,
+  })
 end
 
 -----------------------------------------------------------

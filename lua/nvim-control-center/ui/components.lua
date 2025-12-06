@@ -408,6 +408,11 @@ function M.footer()
   table.insert(keybinds, { " q ", "NvimControlCenterFooterKey" })
   table.insert(keybinds, { "Close ", "NvimControlCenterFooterText" })
 
+  -- Open neoconf local json
+  local neoconf_key = config.keymaps and config.keymaps.neoconf_local or "e"
+  table.insert(keybinds, { " " .. neoconf_key .. " ", "NvimControlCenterFooterKey" })
+  table.insert(keybinds, { "Edit JSON ", "NvimControlCenterFooterText" })
+
   -- Context-aware action
   if setting_type == "bool" or setting_type == "boolean" then
     table.insert(keybinds, { " ⏎ ", "NvimControlCenterFooterKey" })

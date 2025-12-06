@@ -66,17 +66,16 @@ local function run_task(task_index)
 		return
 	end
 
-	-- Determine the command: use cmd if set, otherwise use name as the command
-	local cmd = task.cmd
-	if not cmd or cmd == "" then
-		-- Use task name as command (common pattern for VS Code-style tasks like "npm start")
-		cmd = task.name
+	-- Check if cmd is defined
+	if not task.cmd or task.cmd == "" then
+		vim.notify("No command defined for task: " .. (task.name or "unnamed"), vim.log.levels.ERROR)
+		return
 	end
 
 	-- Build task definition for overseer
 	local task_def = {
 		name = task.name,
-		cmd = cmd,
+		cmd = task.cmd,
 		args = task.args,
 		cwd = task.cwd,
 		env = task.env,

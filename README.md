@@ -230,6 +230,43 @@ For detailed documentation on built-in features, see:
 }
 ```
 
+#### Array
+
+Expandable list with add/edit/remove UI:
+
+```lua
+{
+  name = "lsp.workspaces",
+  label = "Workspaces",
+  type = "array",
+  get = function()
+    return data.load("lsp.workspaces") or {}
+  end,
+  set = function(val, on_init)
+    if not on_init then
+      data.save("lsp.workspaces", val)
+    end
+  end,
+}
+```
+
+**UI appearance:**
+```
+ ▶ Workspaces: (2 items)    ← Click to expand
+```
+
+When expanded:
+```
+ ▼ Workspaces: (2 items)
+  ─── Items ───
+     [1] workspace-one      ← Click to edit
+       ✕ Remove
+     [2] workspace-two
+       ✕ Remove
+     + Add Item
+  ─────────────
+```
+
 #### Action
 
 ```lua

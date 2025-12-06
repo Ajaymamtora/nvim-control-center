@@ -16,12 +16,10 @@ nvim-control-center includes optional **feature modules** that automatically int
 
 Features are disabled by default. Enable them in your setup:
 
+### Simple Enable (Boolean)
+
 ```lua
 require("nvim-control-center").setup({
-  -- Your custom groups here...
-  groups = { ... },
-  
-  -- Enable feature modules
   features = {
     lsp_servers = true,  -- LSP server toggle tab
     formatters = true,   -- Formatter toggle tab
@@ -30,7 +28,45 @@ require("nvim-control-center").setup({
 })
 ```
 
+### With Customization (Table)
+
+You can customize the tab label and icon for any feature:
+
+```lua
+require("nvim-control-center").setup({
+  features = {
+    lsp_servers = {
+      enabled = true,
+      label = "Language Servers",  -- Custom tab name
+      icon = "󰒋",                   -- Custom icon
+    },
+    formatters = {
+      enabled = true,
+      label = "Code Formatters",
+      icon = "󰉢",
+    },
+    tasks = {
+      enabled = true,
+      label = "Project Tasks",
+      icon = "",
+    },
+  },
+})
+```
+
 Each enabled feature adds a new **tab** to your control center UI.
+
+## Feature Configuration Options
+
+When using the table format, these options are available:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `enabled` | boolean | `true` | Whether the feature is enabled |
+| `label` | string | (Feature default) | Tab label displayed in UI |
+| `icon` | string | (Feature default) | Icon displayed before tab label |
+
+**Note**: If you provide a table without `enabled`, it defaults to `true`.
 
 ## How Features Work
 
@@ -70,6 +106,14 @@ Feature tabs use **dynamic settings** that regenerate on each render. This allow
 - **[LSP Servers](lsp-servers.md)** - Enable/disable LSP servers per project
 - **[Formatters](formatters.md)** - Enable/disable formatters per project
 - **[Tasks](tasks.md)** - Manage overseer.nvim tasks with auto-run support
+
+## Default Icons and Labels
+
+| Feature | Default Label | Default Icon |
+|---------|---------------|--------------|
+| lsp_servers | "LSP Servers" | "" |
+| formatters | "Formatters" | "󰉢" |
+| tasks | "Tasks" | "" |
 
 ## Creating Custom Features
 

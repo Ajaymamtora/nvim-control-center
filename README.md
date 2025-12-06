@@ -69,12 +69,23 @@ require("nvim-control-center").setup({
   title = "My Control Center",
   title_icon = "󰢚",
 
-  -- Enable built-in feature modules
+  -- Enable built-in feature modules (simple)
   features = {
     lsp_servers = true,  -- Toggle LSP servers per project
     formatters = true,   -- Toggle formatters per project
     tasks = true,        -- Manage overseer.nvim tasks
   },
+
+  -- Or with customization (table format)
+  -- features = {
+  --   lsp_servers = {
+  --     enabled = true,
+  --     label = "Language Servers",  -- Custom tab name
+  --     icon = "󰒋",                   -- Custom icon
+  --   },
+  --   formatters = { enabled = true, label = "Code Formatters" },
+  --   tasks = { enabled = true },
+  -- },
 
   -- Volt UI options
   volt = {

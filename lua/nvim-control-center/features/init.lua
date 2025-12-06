@@ -11,6 +11,7 @@ end
 -- Registry of available feature modules
 local feature_modules = {
 	lsp_servers = "nvim-control-center.features.lsp_servers",
+	formatters = "nvim-control-center.features.formatters",
 }
 
 -- Loaded feature instances

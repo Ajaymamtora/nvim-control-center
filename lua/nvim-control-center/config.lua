@@ -7,6 +7,7 @@ local defaults = {
   -- Feature toggles for plugin-generated functionality
   features = {
     lsp_servers = false, -- Enable LSP server toggle tab
+    formatters = false, -- Enable formatter toggle tab
   },
 
   -- Where/how we persist & read values via neoconf

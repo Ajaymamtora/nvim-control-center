@@ -107,15 +107,33 @@ Clicking "Edit" expands an inline form with editable fields:
      Working Dir: 
      Arguments: 
     󰑓 Auto Restart: ✗
-    󰒓 Env Variables
-      (2 variables set)
+    ▶ 󰒓 Env Variables (2)
     ↩ Revert Changes
     ✓ Done Editing
   ─────────────────
 ```
 
+Expanding "Env Variables" shows individual entries:
+
+```
+    ▼ 󰒓 Env Variables (2)
+      ─── Environment ───
+       NODE_ENV: development
+        ✕ Remove NODE_ENV
+       PORT: 3000
+        ✕ Remove PORT
+       + Add Variable
+      ───────────────────
+```
+
 - **Edit any field** in any order
 - **Changes save immediately** when you press Enter on a field
+- **Auto Restart** toggle: task will restart automatically when it exits
+- **Env Variables**: expandable section with per-variable editing
+  - Click the header to expand/collapse
+  - Edit values inline by pressing Enter
+  - Delete variables with "✕ Remove"
+  - Add new variables with "+ Add Variable"
 - **Revert Changes** rolls back to the state when you started editing
 - **Done Editing** collapses the form
 
